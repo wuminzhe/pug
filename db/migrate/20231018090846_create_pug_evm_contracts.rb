@@ -10,5 +10,7 @@ class CreatePugEvmContracts < ActiveRecord::Migration[7.1]
 
       t.timestamps
     end
+
+    add_index :pug_evm_contracts, %i[network_id address], unique: true
   end
 end

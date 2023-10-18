@@ -51,17 +51,30 @@ def save(name, abi)
   puts filename
 end
 
+def select_abi
+  dir = "#{Rails.root}/public/abis"
+  filenames = Dir.foreach(dir).to_a.select { |filename| filename.end_with?('.json') }
+  result = `echo "#{filenames.join("\n")}" | #{Rails.root}/bin/fzf`
+  result.blank? ? nil : result.strip
+end
+
+# example:
+# rails "app:add_contract[421_613,0x000000007e24da6666c773280804d8021e12e13f]"
 desc 'Add a contract'
-task :add_contract, %i[chain_id address abi_filename] => :environment do |_t, args|
+task :add_contract, %i[chain_id address] => :environment do |_t, args|
+  abi_filename = select_abi
+  if abi_filename.nil?
+    puts 'No abi file selected'
+    next
+  end
+  dir = "#{Rails.root}/public/abis"
+  raise "File #{dir}/#{abi_filename} not found" unless File.exist?("#{dir}/#{abi_filename}")
+
   chain_id = args[:chain_id]
   address = args[:address]
-  abi_filename = args[:abi_filename]
 
   network = Pug::Network.find_by(chain_id: chain_id)
   raise "Network with chain_id #{chain_id} not found" if network.nil?
-
-  dir = "#{Rails.root}/public/abis"
-  raise "File #{dir}/#{abi_filename} not found" unless File.exist?("#{dir}/#{abi_filename}")
 
   raise "Api::Etherscan.#{network_name} not found" unless Api::Etherscan.respond_to? network.name
 
