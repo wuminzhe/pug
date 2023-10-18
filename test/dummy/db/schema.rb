@@ -10,7 +10,18 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2023_10_18_055158) do
+ActiveRecord::Schema[7.1].define(version: 2023_10_18_090846) do
+  create_table "pug_evm_contracts", force: :cascade do |t|
+    t.integer "network_id"
+    t.string "address"
+    t.string "abi_file"
+    t.string "creator"
+    t.integer "creation_block"
+    t.string "creation_tx_hash"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "pug_networks", force: :cascade do |t|
     t.integer "chain_id"
     t.string "name"

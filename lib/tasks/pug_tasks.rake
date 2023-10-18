@@ -23,7 +23,8 @@ task :add_contract_abi, %i[chain_id address] => :environment do |_t, args|
   address = args[:address]
 
   network_name = Pug::Network.find_by(chain_id: chain_id).name
-  raise "Network with chain_id #{chain_id} not found" if network_name.nil?
+  raise "Network with chain_id #{chain_id} not found" if network_name&.nil?
+
   raise "Api::Etherscan.#{network_name} not found" unless Api::Etherscan.respond_to? network_name
 
   contract_abi = Api::Etherscan.send(network_name).extract_contract_abi(address)
@@ -47,5 +48,35 @@ def save(name, abi)
     end
   end
 
-  puts "#{dir}/#{filename}"
+  puts filename
+end
+
+desc 'Add a contract'
+task :add_contract, %i[chain_id address abi_filename] => :environment do |_t, args|
+  chain_id = args[:chain_id]
+  address = args[:address]
+  abi_filename = args[:abi_filename]
+
+  network = Pug::Network.find_by(chain_id: chain_id)
+  raise "Network with chain_id #{chain_id} not found" if network.nil?
+
+  dir = "#{Rails.root}/public/abis"
+  raise "File #{dir}/#{abi_filename} not found" unless File.exist?("#{dir}/#{abi_filename}")
+
+  raise "Api::Etherscan.#{network_name} not found" unless Api::Etherscan.respond_to? network.name
+
+  creation_info = Api::Etherscan.send(network.name).contract_getcontractcreation({ contractaddresses: address }).first
+
+  # TODO: check the rpc is available
+  client = Api::EvmClient.new(network.rpc_list.first)
+  creation_block = client.eth_get_transaction_by_hash(creation_info['txHash'])['blockNumber'].to_i(16)
+
+  Pug::EvmContract.create!(
+    network_id: network.id,
+    address: address,
+    abi_file: abi_filename,
+    creator: creation_info['contractCreator'],
+    creation_tx_hash: creation_info['txHash'],
+    creation_block: creation_block
+  )
 end
