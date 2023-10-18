@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  chain_id: 1
+  name: MyString
+  display_name: MyString
+  rpc_list: 
+  scan_span: 1
+
+two:
+  chain_id: 1
+  name: MyString
+  display_name: MyString
+  rpc_list: 
+  scan_span: 1
