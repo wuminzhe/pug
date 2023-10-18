@@ -1,63 +1,28 @@
-# hello_rails7_pg_redis
+# Pug
+Short description and motivation.
 
-A template to create a rails 7 dev container.
+## Usage
+How to use my plugin.
 
-0. create a repo from this template.
-1. clone the repo to your local
-2. start a dev container for your local repo.
+## Installation
+Add this line to your application's Gemfile:
 
-   I tried 1. vscode, 2. neovim + [nvim-dev-container](https://github.com/esensar/nvim-dev-container). both are ok.
-   
-4. In your dev container
+```ruby
+gem "pug"
+```
 
-   1. `gem install rails -v 7.1.1`
-    
-   2. (optional) `service start cron` if you need crontab to work.
+And then execute:
+```bash
+$ bundle
+```
 
-   3. Generate your rails project in the dev container.
+Or install it yourself as:
+```bash
+$ gem install pug
+```
 
-      ```bash
-      # importmaps + propshaft (my prefer) 
-      rails new . -a propshaft -d=postgresql
+## Contributing
+Contribution directions go here.
 
-      # or, one of the following
-      # importmaps + sprockets
-      rails new . -d=postgresql
-
-      # importmaps + sprockets + tailwind, https://techracho.bpsinc.jp/hachi8833/2022_02_17/115435
-      rails new . --css tailwind -d=postgresql
-
-      # importmaps + propshaft + tailwind
-      rails new . --css tailwind -a propshaft -d=postgresql
-
-      # (nodejs) esbuild + sprockets + tailwind
-      rails new . --javascript esbuild --css tailwind -d=postgresql
-
-      # (nodejs) esbuild + propshaft + bootstrap
-      rails new . --javascript esbuild --css bootstrap -a propshaft -d=postgresql
-      ```
-
-   4. fix config/database.yml by adding the `host`, `username` and `password` to the development section.
-
-      ```yaml
-      ...
-      default: &default
-         ...
-         host: <%= ENV.fetch("DB_HOST") { "db" } %>
-         username: <%= ENV.fetch("DB_USERNAME") { "postgres" } %>
-         password: <%= ENV.fetch("DB_PASSWORD") { "password" } %>
-      ...
-      ```
-
-      ```bash
-      bundle exec rails db:create
-      ```
-
-   4. run your app in the container.
-
-      ```bash
-
-      ./bin/dev
-      ```
-
-5. now, everything is ready.
+## License
+The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
