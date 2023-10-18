@@ -44,7 +44,7 @@ def save(name, abi)
   FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
   unless File.exist?("#{dir}/#{filename}")
     File.open("#{dir}/#{filename}", 'w') do |f|
-      f.write abi.to_json
+      f.write JSON.pretty_generate(abi)
     end
   end
 
@@ -54,7 +54,10 @@ end
 def select_abi
   dir = "#{Rails.root}/public/abis"
   filenames = Dir.foreach(dir).to_a.select { |filename| filename.end_with?('.json') }
-  result = `echo "#{filenames.join("\n")}" | #{Rails.root}/bin/fzf`
+  files = filenames.map do |filename|
+    "#{dir}/#{filename}"
+  end
+  result = `echo "#{files.join("\n")}" | #{Rails.root}/bin/fzf --preview 'cat {}'`
   result.blank? ? nil : result.strip
 end
 
