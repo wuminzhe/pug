@@ -93,3 +93,11 @@ task :add_contract, %i[chain_id address] => :environment do |_t, args|
     creation_block: creation_block
   )
 end
+
+desc 'List abis files'
+task :list_abis do
+  dir = "#{Rails.root}/public/abis"
+  Dir.foreach(dir) do |filename|
+    puts "#{File.stat("#{dir}/#{filename}").ctime} - #{filename}" if filename.end_with?('.json')
+  end
+end
