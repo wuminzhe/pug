@@ -46,8 +46,9 @@ module Pug
     end
 
     def parse_abi
-      abi = JSON.parse(File.read("#{Rails.root}/public/abis/#{abi_file}"))
-      name = abi_file.split('-')[0]
+      abi = JSON.parse(File.read(abi_file))
+      filename = abi_file.split('/').last
+      name = filename.split('-')[0]
       Eth::Contract.from_abi(abi: abi, address: address, name: name)
     end
   end

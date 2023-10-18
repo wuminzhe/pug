@@ -65,13 +65,11 @@ end
 # rails "app:add_contract[421_613,0x000000007e24da6666c773280804d8021e12e13f]"
 desc 'Add a contract'
 task :add_contract, %i[chain_id address] => :environment do |_t, args|
-  abi_filename = select_abi
-  if abi_filename.nil?
+  abi_file = select_abi
+  if abi_file.nil?
     puts 'No abi file selected'
     next
   end
-  dir = "#{Rails.root}/public/abis"
-  raise "File #{dir}/#{abi_filename} not found" unless File.exist?("#{dir}/#{abi_filename}")
 
   chain_id = args[:chain_id]
   address = args[:address]
@@ -90,7 +88,7 @@ task :add_contract, %i[chain_id address] => :environment do |_t, args|
   Pug::EvmContract.create!(
     network_id: network.id,
     address: address,
-    abi_file: abi_filename,
+    abi_file: abi_file,
     creator: creation_info['contractCreator'],
     creation_tx_hash: creation_info['txHash'],
     creation_block: creation_block
@@ -101,6 +99,6 @@ desc 'List abis files'
 task :list_abis do
   dir = "#{Rails.root}/public/abis"
   Dir.foreach(dir) do |filename|
-    puts "#{File.stat("#{dir}/#{filename}").ctime} - #{filename}" if filename.end_with?('.json')
+    puts "#{File.stat("#{dir}/#{filename}").ctime} - #{dir}/#{filename}" if filename.end_with?('.json')
   end
 end
