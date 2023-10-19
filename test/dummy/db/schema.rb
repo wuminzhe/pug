@@ -18,6 +18,7 @@ ActiveRecord::Schema[7.1].define(version: 2023_10_19_000315) do
     t.string "creator"
     t.integer "creation_block"
     t.string "creation_tx_hash"
+    t.datetime "creation_timestamp"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["network_id", "address"], name: "index_pug_evm_contracts_on_network_id_and_address", unique: true

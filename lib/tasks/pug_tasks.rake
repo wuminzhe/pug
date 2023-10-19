@@ -12,7 +12,8 @@ task :add_contract_abi_from_file, %i[name abi_file] => :environment do |_t, args
   name = args[:name]
   abi = JSON.parse File.open(args[:abi_file]).read
 
-  save(name, abi)
+  file = save(name, abi)
+  puts "Abi file: #{file}"
 end
 
 # example:
@@ -22,16 +23,21 @@ task :add_contract_abi, %i[chain_id address] => :environment do |_t, args|
   chain_id = args[:chain_id]
   address = args[:address]
 
+  name, abi = get_contract_abi(chain_id, address)
+  file = save(name, abi)
+  puts "Abi file: #{file}"
+end
+
+def get_contract_abi(chain_id, address)
   network_name = Pug::Network.find_by(chain_id: chain_id).name
   raise "Network with chain_id #{chain_id} not found" if network_name&.nil?
 
-  raise "Api::Etherscan.#{network_name} not found" unless Api::Etherscan.respond_to? network_name
+  raise 'No explorer api found for this network' unless Api::Etherscan.respond_to? network_name
 
   contract_abi = Api::Etherscan.send(network_name).extract_contract_abi(address)
   name = contract_abi[:contract_name]
   abi = contract_abi[:abi]
-
-  save(name, abi)
+  [name, abi]
 end
 
 def save(name, abi)
@@ -48,7 +54,7 @@ def save(name, abi)
     end
   end
 
-  puts filename
+  "#{dir}/#{filename}"
 end
 
 def select_abi
@@ -61,37 +67,76 @@ def select_abi
   result.blank? ? nil : result.strip
 end
 
+def prepare_abi(chain_id, address)
+  # fetch abi from etherscan first.
+  name, abi = get_contract_abi(chain_id, address)
+  save(name, abi)
+rescue StandardError => e
+  raise e unless e.message.include? 'No explorer api found for this network'
+
+  # puts e.message
+
+  # select abi file if not found on etherscan
+  select_abi
+end
+
+def get_creation_info(network, address)
+  if Api::Etherscan.respond_to? network.name
+    data = Api::Etherscan.send(network.name).contract_getcontractcreation({ contractaddresses: address })
+    raise "Contract with address #{address} not found on etherscan" if data.empty?
+
+    # TODO: check the rpc is available
+    client = Api::EvmClient.new(network.rpc_list.first)
+    creation_block = client.eth_get_transaction_by_hash(data[0]['txHash'])['blockNumber'].to_i(16)
+    creation_timestamp = client.get_block_by_number(creation_block)['timestamp'].to_i(16)
+
+    {
+      creator: data[0]['contractCreator'],
+      tx_hash: data[0]['txHash'],
+      block: creation_block,
+      timestamp: Time.at(creation_timestamp)
+    }
+  elsif Api::Subscan.respond_to? network.name
+    data = Api::Subscan.send(network.name).evm_contract({ address: address })
+    raise "Contract with address #{address} not found on subscan" if data.blank?
+
+    {
+      creator: data['deployer'],
+      tx_hash: data['transaction_hash'],
+      block: data['block_num'],
+      timestamp: Time.at(data['deploy_at'])
+    }
+  else
+    raise "No explorer api found for network #{network.name}"
+  end
+end
+
 # example:
 # rails "app:add_contract[421_613,0x000000007e24da6666c773280804d8021e12e13f]"
 desc 'Add a contract'
 task :add_contract, %i[chain_id address] => :environment do |_t, args|
-  abi_file = select_abi
-  if abi_file.nil?
-    puts 'No abi file selected'
-    next
-  end
-
   chain_id = args[:chain_id]
   address = args[:address]
+
+  abi_file = prepare_abi(chain_id, address)
+  if abi_file.nil?
+    puts 'No abi file found or selected.'
+    next
+  end
 
   network = Pug::Network.find_by(chain_id: chain_id)
   raise "Network with chain_id #{chain_id} not found" if network.nil?
 
-  raise "Api::Etherscan.#{network_name} not found" unless Api::Etherscan.respond_to? network.name
-
-  creation_info = Api::Etherscan.send(network.name).contract_getcontractcreation({ contractaddresses: address }).first
-
-  # TODO: check the rpc is available
-  client = Api::EvmClient.new(network.rpc_list.first)
-  creation_block = client.eth_get_transaction_by_hash(creation_info['txHash'])['blockNumber'].to_i(16)
+  creation_info = get_creation_info(network, address)
 
   Pug::EvmContract.create!(
     network_id: network.id,
     address: address,
     abi_file: abi_file,
-    creator: creation_info['contractCreator'],
-    creation_tx_hash: creation_info['txHash'],
-    creation_block: creation_block
+    creator: creation_info[:creator],
+    creation_tx_hash: creation_info[:tx_hash],
+    creation_block: creation_info[:block],
+    creation_timestamp: creation_info[:timestamp]
   )
 end
 
