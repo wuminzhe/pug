@@ -13,5 +13,10 @@
 #
 module Pug
   class Network < ApplicationRecord
+    has_many :evm_contracts
+
+    def client
+      Api::RpcClient.new(rpc_list.first)
+    end
   end
 end

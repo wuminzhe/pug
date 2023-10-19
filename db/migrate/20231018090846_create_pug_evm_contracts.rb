@@ -8,6 +8,7 @@ class CreatePugEvmContracts < ActiveRecord::Migration[7.1]
       t.integer :creation_block
       t.string :creation_tx_hash
       t.datetime :creation_timestamp
+      t.integer :last_scanned_block
 
       t.timestamps
     end

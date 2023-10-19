@@ -2,7 +2,7 @@ require 'pug/version'
 require 'pug/engine'
 require 'api/etherscan'
 require 'api/subscan'
-require 'api/evm_client'
+require 'api/rpc_client'
 require 'eth'
 include Eth
 

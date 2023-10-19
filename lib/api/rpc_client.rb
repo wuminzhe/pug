@@ -1,6 +1,6 @@
 # https://docs.infura.io/networks/ethereum/json-rpc-methods
 module Api
-  class EvmClient
+  class RpcClient
     # build EvmTrackHelper instance
     def initialize(url)
       @client = Eth::Client::Http.new(url)
@@ -120,12 +120,18 @@ module Api
     # From: https://docs.alchemy.com/docs/deep-dive-into-eth_getlogs
     def get_logs(addresses, topics, from_block, block_interval)
       to_block = [(from_block + block_interval - 1), latest_block_number].min
-      return [] if to_block < from_block
 
-      [
-        get_logs_between(addresses, topics, from_block, to_block),
-        to_block
-      ]
+      if to_block >= from_block
+        [
+          get_logs_between(addresses, topics, from_block, to_block),
+          to_block
+        ]
+      else
+        [
+          [],
+          from_block - 1
+        ]
+      end
     end
 
     def get_logs_between(addresses, topics, from_block, to_block)
@@ -207,5 +213,5 @@ end
 # rpc = 'https://arbitrum-goerli.publicnode.com'
 # # rpc = 'https://rpc.darwinia.network'
 #
-# client = Client::EvmClient.new(rpc)
+# client = Client::RpcClient.new(rpc)
 # p client.eth_block_number

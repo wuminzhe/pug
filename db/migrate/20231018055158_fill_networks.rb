@@ -10,7 +10,7 @@ class FillNetworks < ActiveRecord::Migration[7.1]
         name: network['shortName'].underscore,
         display_name: network['name'],
         rpc_list: network['rpc'],
-        scan_span: 1000
+        scan_span: 5000
       )
     end
   end

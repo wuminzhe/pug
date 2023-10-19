@@ -2,15 +2,17 @@
 #
 # Table name: pug_evm_contracts
 #
-#  id               :integer          not null, primary key
-#  network_id       :integer          not null
-#  address          :string
-#  abi_file         :string
-#  creator          :string
-#  creation_block   :integer
-#  creation_tx_hash :string
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
+#  id                 :integer          not null, primary key
+#  network_id         :integer
+#  address            :string
+#  abi_file           :string
+#  creator            :string
+#  creation_block     :integer
+#  creation_tx_hash   :string
+#  creation_timestamp :datetime
+#  last_scanned_block :integer
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
 #
 module Pug
   class EvmContract < ApplicationRecord
@@ -30,6 +32,10 @@ module Pug
           event.name == name_or_signature
         end
       end
+    end
+
+    def event_signatures
+      parsed_abi.events.map(&:signature)
     end
 
     private
