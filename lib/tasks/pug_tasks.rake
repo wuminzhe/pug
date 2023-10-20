@@ -200,7 +200,15 @@ task list_networks: :environment do
 
   chain_id = result.split(',')[0].strip
   network = Pug::Network.find_by(chain_id: chain_id)
-  puts network.attributes
+
+  network.attributes.except('id').each do |k, v|
+    print "#{k}: "
+    if v.is_a? Time
+      puts v
+    else
+      p v
+    end
+  end
 end
 
 desc 'Fetch logs of a contract'
