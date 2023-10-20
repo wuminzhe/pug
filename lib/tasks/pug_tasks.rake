@@ -97,7 +97,7 @@ def scan_logs_of_contract(network, contract, &block)
   )
 
   # process logs
-  return if logs.blank?
+  return if last_scanned_block <= from_block
 
   block.call logs, last_scanned_block
   contract.update(last_scanned_block: last_scanned_block)
