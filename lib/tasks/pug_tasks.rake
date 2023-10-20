@@ -47,7 +47,8 @@ def prepare_abi(chain_id, address)
 rescue StandardError => e
   raise e unless e.message.include? 'No explorer api found for this network'
 
-  # puts e.message
+  puts e.message
+  puts 'Select abi file from local'
 
   # select abi file if not found on etherscan
   select_abi
@@ -87,7 +88,6 @@ end
 def scan_logs_of_contract(network, contract, &block)
   # get logs from blockchain node
   from_block = contract.last_scanned_block + 1
-  puts "scan logs of `#{network.name}/#{contract.address}` from #{from_block}"
 
   logs, last_scanned_block = network.client.get_logs(
     [contract.address],
@@ -156,7 +156,7 @@ task :add_contract, %i[chain_id address] => :environment do |_t, args|
 
   Pug::EvmContract.create!(
     network_id: network.id,
-    address: address,
+    address: address.downcase,
     abi_file: abi_file,
     creator: creation_info[:creator],
     creation_tx_hash: creation_info[:tx_hash],
@@ -177,7 +177,10 @@ end
 desc 'List contracts'
 task list_contracts: :environment do
   Pug::EvmContract.all.each do |contract|
-    puts "#{contract.network.chain_id},#{contract.address}"
+    puts "Chain Id: #{contract.network.chain_id}"
+    puts contract.attributes
+    puts "rails \"fetch_logs[#{contract.network.chain_id},#{contract.address}]\""
+    puts '---------------------------------------'
   end
 end
 
@@ -203,6 +206,8 @@ task :fetch_logs, %i[chain_id address] => :environment do |_t, args|
   raise "Contract with address #{args[:address]} not found" if contract.nil?
 
   loop do
+    puts "scan logs of `#{network.name}/#{contract.address}` from #{contract.last_scanned_block + 1}"
+
     ActiveRecord::Base.transaction do
       scan_logs_of_contract(network, contract) do |logs|
         logs.each do |log|
@@ -214,7 +219,7 @@ task :fetch_logs, %i[chain_id address] => :environment do |_t, args|
     sleep 2
   rescue StandardError => e
     puts e.message
-    puts e.backtrace.join("\n")
+    puts e.backtrace.join("\n") unless e.message.include? 'timeout'
     sleep 10
   end
 end

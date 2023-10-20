@@ -7,6 +7,7 @@ module Api
   class Etherscan
     ETHERSCAN_API = 'https://api.etherscan.io/api'.freeze
     ARBITRUM_GOERLI_API = 'https://api-goerli.arbiscan.io/api'.freeze
+    ARBITRUM_SEPOLIA_API = 'https://api-sepolia.arbiscan.io/api'.freeze
 
     def self.eth(api_key = nil)
       Api::Etherscan.new(ETHERSCAN_API, api_key)
@@ -14,6 +15,10 @@ module Api
 
     def self.arb_goerli(api_key = nil)
       Api::Etherscan.new(ARBITRUM_GOERLI_API, api_key)
+    end
+
+    def self.arb_sep(api_key = nil)
+      Api::Etherscan.new(ARBITRUM_SEPOLIA_API, api_key)
     end
 
     def initialize(url, api_key = nil)
