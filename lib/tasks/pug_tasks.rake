@@ -24,7 +24,7 @@ def select_abi
   files = filenames.map do |filename|
     "#{dir}/#{filename}"
   end
-  result = `echo "#{files.join("\n")}" | #{Rails.root}/bin/fzf --preview 'cat {}'`
+  result = `echo "#{files.join("\n")}" | fzf --preview 'cat {}'`
   result.blank? ? nil : result.strip
 end
 
@@ -179,6 +179,19 @@ task list_contracts: :environment do
   Pug::EvmContract.all.each do |contract|
     puts "#{contract.network.chain_id},#{contract.address}"
   end
+end
+
+desc 'List networks'
+task list_networks: :environment do
+  list = Pug::Network.all.map do |network|
+    "#{network.chain_id}, #{network.name}, #{network.display_name}"
+  end.join("\n")
+  result = `echo "#{list}" | fzf`
+  next if result.blank?
+
+  chain_id = result.split(',')[0].strip
+  network = Pug::Network.find_by(chain_id: chain_id)
+  puts network.attributes
 end
 
 desc 'Fetch logs of a contract'
