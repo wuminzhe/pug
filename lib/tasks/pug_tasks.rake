@@ -43,7 +43,9 @@ end
 def prepare_abi(chain_id, address)
   # fetch abi from etherscan first.
   name, abi = get_contract_abi(chain_id, address)
-  save(name, abi)
+  file = save(name, abi)
+  puts "Abi file: #{file}"
+  file
 rescue StandardError => e
   raise e unless e.message.include? 'No explorer api found for this network'
 
@@ -99,6 +101,7 @@ def scan_logs_of_contract(network, contract, &block)
   # process logs
   return if last_scanned_block <= from_block
 
+  puts "scanned `#{network.name}/#{contract.address}` in [#{from_block},#{last_scanned_block}]"
   block.call logs, last_scanned_block
   contract.update(last_scanned_block: last_scanned_block)
 end
@@ -166,6 +169,27 @@ task :add_contract, %i[chain_id address] => :environment do |_t, args|
   )
 end
 
+desc 'List networks'
+task list_networks: :environment do
+  list = Pug::Network.all.map do |network|
+    "#{network.chain_id}, #{network.name}, #{network.display_name}"
+  end.join("\n")
+  result = `echo "#{list}" | fzf`
+  next if result.blank?
+
+  chain_id = result.split(',')[0].strip
+  network = Pug::Network.find_by(chain_id: chain_id)
+
+  network.attributes.except('id').each do |k, v|
+    print "#{k}: "
+    if v.is_a? Time
+      puts v
+    else
+      p v
+    end
+  end
+end
+
 desc 'List abis files'
 task list_abis: :environment do
   dir = "#{Rails.root}/public/abis"
@@ -190,29 +214,17 @@ task list_contracts: :environment do
   end
 end
 
-desc 'List networks'
-task list_networks: :environment do
-  list = Pug::Network.all.map do |network|
-    "#{network.chain_id}, #{network.name}, #{network.display_name}"
-  end.join("\n")
-  result = `echo "#{list}" | fzf`
-  next if result.blank?
-
-  chain_id = result.split(',')[0].strip
-  network = Pug::Network.find_by(chain_id: chain_id)
-
-  network.attributes.except('id').each do |k, v|
-    print "#{k}: "
-    if v.is_a? Time
-      puts v
-    else
-      p v
-    end
+desc 'Print procfile items for contracts'
+task print_procfile: :environment do
+  Pug::EvmContract.all.each do |contract|
+    puts "#{contract.name}: bin/rails \"fetch_logs[#{contract.network.chain_id},#{contract.address}]\""
   end
 end
 
 desc 'Fetch logs of a contract'
 task :fetch_logs, %i[chain_id address] => :environment do |_t, args|
+  $stdout.sync = true
+
   network = Pug::Network.find_by(chain_id: args[:chain_id])
   raise "Network with chain_id #{args[:chain_id]} not found" if network.nil?
 
@@ -220,8 +232,6 @@ task :fetch_logs, %i[chain_id address] => :environment do |_t, args|
   raise "Contract with address #{args[:address]} not found" if contract.nil?
 
   loop do
-    puts "scan logs of `#{network.name}/#{contract.address}` from #{contract.last_scanned_block + 1}"
-
     ActiveRecord::Base.transaction do
       scan_logs_of_contract(network, contract) do |logs|
         logs.each do |log|

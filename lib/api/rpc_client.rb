@@ -122,7 +122,6 @@ module Api
       to_block = [(from_block + block_interval - 1), latest_block_number].min
 
       if to_block > from_block
-        puts "#{from_block} to #{to_block}"
         [
           get_logs_between(addresses, topics, from_block, to_block),
           to_block

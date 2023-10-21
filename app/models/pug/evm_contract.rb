@@ -38,6 +38,10 @@ module Pug
       parsed_abi.events.map(&:signature)
     end
 
+    def name
+      abi_file.split('/').last.split('-')[0].underscore
+    end
+
     private
 
     def hex?(str)
