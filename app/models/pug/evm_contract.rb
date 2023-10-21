@@ -18,6 +18,10 @@ module Pug
   class EvmContract < ApplicationRecord
     belongs_to :network
 
+    def abi
+      read_abi
+    end
+
     def parsed_abi
       @parsed_abi ||= parse_abi
     end
@@ -56,10 +60,13 @@ module Pug
     end
 
     def parse_abi
-      abi = JSON.parse(File.read(abi_file))
       filename = abi_file.split('/').last
       name = filename.split('-')[0]
-      Eth::Contract.from_abi(abi: abi, address: address, name: name)
+      Eth::Contract.from_abi(abi: read_abi, address: address, name: name)
+    end
+
+    def read_abi
+      JSON.parse(File.read(abi_file))
     end
   end
 end

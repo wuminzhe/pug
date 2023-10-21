@@ -87,6 +87,104 @@ def get_creation_info(network, address)
   end
 end
 
+def generate_models(evm_contract)
+  event_abis = evm_contract.abi.select do |item|
+    item['type'] == 'event'
+  end
+  event_abis.each do |event_abi|
+    generate_model(evm_contract.name, event_abi)
+  end
+end
+
+def build_columns(params)
+  params
+    .reduce([]) { |acc, param| acc + flat('p', param) }
+    .map { |param| [param[0], to_rails_type(param[1])] }
+end
+
+def to_rails_type(abi_type)
+  if abi_type == 'address'
+    'string'
+  elsif abi_type == 'bool'
+    'boolean'
+  elsif abi_type =~ /uint\d+/
+    'integer'
+  elsif abi_type =~ /int\d+/
+    'integer'
+  elsif abi_type =~ /bytes\d*/
+    'string'
+  else
+    abi_type
+  end
+end
+
+def flat(prefix, param)
+  param_name, param_content = param
+  param_name = param_name.underscore
+
+  if param_content.is_a?(String)
+    return [[param_name, param_content]] if prefix.nil?
+
+    [["#{prefix}_#{param_name}", param_content]]
+  elsif param_content.is_a?(Array)
+    result = []
+    param_content.each do |inner_param|
+      result += flat("#{prefix}_#{param_name}", inner_param)
+    end
+    result
+  end
+end
+
+# returns:
+# [
+#   ["root", "bytes32"],
+#   ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
+# ]
+def get_params(inputs)
+  inputs.map do |input|
+    type(input)
+  end
+end
+
+# result examples:
+# ["root", "bytes32"]
+# ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
+def type(input)
+  if input['type'] == 'tuple'
+    [input['name'], input['components'].map { |c| type(c) }]
+  elsif input['type'] == 'enum'
+    [input['name'], 'uint8']
+  else
+    [input['name'], input['type']]
+  end
+end
+
+def shorten_string(string)
+  words = string.split('_')
+  words.map { |word| word[0] }.join('')
+end
+
+def generate_model(contract_name, event_abi)
+  # model name
+  name = "#{contract_name.underscore}_#{event_abi['name'].underscore}"
+  name = "#{shorten_string(contract_name.underscore)}_#{event_abi['name'].underscore}" if name.pluralize.length > 63
+  model_name = name.camelize
+  p model_name
+
+  # columns
+  event_inputs = event_abi.fetch('inputs', [])
+  params = get_params(event_inputs)
+  columns = build_columns(params)
+  columns_str = columns.map { |c| "#{c[0]}:#{c[1]}:index" }.join(' ')
+  p columns_str
+
+  if Pug.const_defined?(model_name)
+    puts "    model already exists: #{model_name}"
+  else
+    system("./bin/rails g model Pug::#{model_name} evm_event_log:belongs_to #{columns_str} --no-test-framework")
+  end
+end
+
 def scan_logs_of_contract(network, contract, &block)
   # get logs from blockchain node
   from_block = contract.last_scanned_block + 1
@@ -167,6 +265,13 @@ task :add_contract, %i[chain_id address] => :environment do |_t, args|
     creation_timestamp: creation_info[:timestamp],
     last_scanned_block: creation_info[:block]
   )
+end
+
+desc 'Generate models for contracts'
+task generate_models: :environment do
+  Pug::EvmContract.all.each do |contract|
+    generate_models(contract)
+  end
 end
 
 desc 'List networks'
