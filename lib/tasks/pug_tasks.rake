@@ -106,7 +106,7 @@ module Pug
       if Pug.const_defined?(model_name)
         puts "    model already exists: Pug::#{model_name}"
       else
-        system("./bin/rails g model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework")
+        system("./bin/rails g evm_event_model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework")
       end
     end
 

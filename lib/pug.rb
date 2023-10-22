@@ -7,6 +7,8 @@ require 'eth'
 include Eth
 require 'pug/abicoder'
 
+require 'generators/evm_event_model/evm_event_model_generator'
+
 module Pug
   # Your code goes here...
 end
