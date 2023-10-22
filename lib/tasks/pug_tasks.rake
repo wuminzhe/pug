@@ -90,98 +90,23 @@ module Pug
     end
 
     def generate_models(evm_contract)
-      event_abis = evm_contract.abi.select do |item|
-        item['type'] == 'event'
-      end
-      event_abis.each do |event_abi|
-        generate_model(evm_contract.name, event_abi)
+      evm_contract.event_signatures.each do |event_signature|
+        generate_model(evm_contract, event_signature)
       end
     end
 
-    def build_columns(params)
-      params
-        .reduce([]) { |acc, param| acc + flat('p', param) }
-        .map { |param| [param[0], to_rails_type(param[1])] }
-    end
-
-    def to_rails_type(abi_type)
-      if abi_type == 'address'
-        'string'
-      elsif abi_type == 'bool'
-        'boolean'
-      elsif abi_type =~ /uint\d+/
-        'integer'
-      elsif abi_type =~ /int\d+/
-        'integer'
-      elsif abi_type =~ /bytes\d*/
-        'string'
-      else
-        abi_type
-      end
-    end
-
-    def flat(prefix, param)
-      param_name, param_content = param
-      param_name = param_name.underscore
-
-      if param_content.is_a?(String)
-        return [[param_name, param_content]] if prefix.nil?
-
-        [["#{prefix}_#{param_name}", param_content]]
-      elsif param_content.is_a?(Array)
-        result = []
-        param_content.each do |inner_param|
-          result += flat("#{prefix}_#{param_name}", inner_param)
-        end
-        result
-      end
-    end
-
-    # returns:
-    # [
-    #   ["root", "bytes32"],
-    #   ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
-    # ]
-    def get_params(inputs)
-      inputs.map do |input|
-        type(input)
-      end
-    end
-
-    # result examples:
-    # ["root", "bytes32"]
-    # ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
-    def type(input)
-      if input['type'] == 'tuple'
-        [input['name'], input['components'].map { |c| type(c) }]
-      elsif input['type'] == 'enum'
-        [input['name'], 'uint8']
-      else
-        [input['name'], input['type']]
-      end
-    end
-
-    def shorten_string(string)
-      words = string.split('_')
-      words.map { |word| word[0] }.join('')
-    end
-
-    def generate_model(contract_name, event_abi)
+    def generate_model(contract, event_signature)
       # model name
-      name = "#{contract_name.underscore}_#{event_abi['name'].underscore}"
-      name = "#{shorten_string(contract_name.underscore)}_#{event_abi['name'].underscore}" if name.pluralize.length > 63
-      model_name = name.camelize
+      model_name = contract.event_model_name(event_signature)
 
       # columns
-      event_inputs = event_abi.fetch('inputs', [])
-      params = get_params(event_inputs)
-      columns = build_columns(params)
+      columns = contract.event_columns(event_signature)
       columns_str = columns.map { |c| "#{c[0]}:#{c[1]}:index" }.join(' ')
 
       if Pug.const_defined?(model_name)
         puts "    model already exists: Pug::#{model_name}"
       else
-        system("./bin/rails g model Pug::#{model_name} evm_log:belongs_to #{columns_str} --no-test-framework")
+        system("./bin/rails g model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework")
       end
     end
 

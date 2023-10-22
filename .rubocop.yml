@@ -1,0 +1,5 @@
+# Set the Ruby version
+# Replace this with the version you are using
+AllCops:
+  TargetRubyVersion: 3.2
+

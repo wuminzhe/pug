@@ -27,7 +27,7 @@ module Pug
 
     def self.create_from(network, log)
       not_existed = find_by(
-        network: network,
+        network:,
         block_number: log['block_number'],
         transaction_index: log['transaction_index'],
         log_index: log['log_index']
@@ -38,11 +38,11 @@ module Pug
         return
       end
 
-      evm_contract = EvmContract.find_by(network: network, address: log['address'])
+      evm_contract = EvmContract.find_by(network:, address: log['address'])
 
       evm_log = new(
-        network: network,
-        evm_contract: evm_contract,
+        network:,
+        evm_contract:,
         address: log['address'],
         data: log['data'],
         block_number: log['block_number'],
@@ -56,7 +56,84 @@ module Pug
         evm_log.send("topic#{index}=", topic)
       end
 
-      evm_log.save
+      evm_log.save!
+      evm_log.decode
+    end
+
+    def topics
+      [topic0, topic1, topic2, topic3].compact
+    end
+
+    # {
+    #   "inputs"=>[
+    #     {
+    #       "components"=>[
+    #         {"internalType"=>"address", "name"=>"channel", "type"=>"address"},
+    #         {"internalType"=>"uint256", "name"=>"index", "type"=>"uint256"},
+    #         {"internalType"=>"uint256", "name"=>"fromChainId", "type"=>"uint256"},
+    #         {"internalType"=>"address", "name"=>"from", "type"=>"address"},
+    #         {"internalType"=>"uint256", "name"=>"toChainId", "type"=>"uint256"},
+    #         {"internalType"=>"address", "name"=>"to", "type"=>"address"},
+    #         {"internalType"=>"bytes", "name"=>"encoded", "type"=>"bytes"}
+    #       ],
+    #       "internalType"=>"struct Message",
+    #       "name"=>"message",
+    #       "type"=>"tuple"
+    #     }
+    #   ],
+    #   "name"=>"clearFailedMessage",
+    #   "outputs"=>[],
+    #   "stateMutability"=>"nonpayable",
+    #   "type"=>"function"
+    # }
+    def decode
+      #########################################
+      # 1 - columns names
+      #########################################
+      event_column_names = evm_contract.event_columns(topic0).map { |c| c[0] }
+
+      #########################################
+      # 2 - columns values
+      #########################################
+      raw_event_abi = evm_contract.raw_event_abi(topic0)
+
+      topic_inputs, data_inputs = raw_event_abi['inputs'].partition { |i| i['indexed'] }
+
+      # TOPICS(indexed)
+      topic_types = topic_inputs.map { |i| i['type'] }
+      # If event is anonymous, all topics are arguments. Otherwise, the first
+      # topic will be the event signature.
+      topics_without_signature = topics[1..] if raw_event_abi['anonymous'] == false
+      decoded_topics = topics_without_signature.map.with_index { |t, i| Abicoder.decode([topic_types[i]], t)[0] }
+
+      # DATA
+      data_types = data_inputs.map { |i| type(i) }
+      decoded_data = Abicoder.decode(data_types, data)
+
+      event_column_values = decoded_topics + decoded_data
+
+      #########################################
+      # 3 - find model for this event then save
+      #########################################
+      event_model_class = Pug.const_get(evm_contract.event_model_name(topic0))
+      raise "No model for event #{topic0}" if event_model_class.nil?
+
+      record = Hash[event_column_names.zip(event_column_values)]
+      record[:pug_evm_log] = self
+      event_model_class.create!(record)
+    end
+
+    # ['bytes32', 'tuple']
+    #  ->
+    # ['bytes32', '(address,uint256,uint256,address,uint256,address,bytes)']
+    def type(input)
+      if input['type'] == 'tuple'
+        "(#{input['components'].map { |c| type(c) }.join(',')})"
+      elsif input['type'] == 'enum'
+        'uint8'
+      else
+        input['type']
+      end
     end
   end
 end

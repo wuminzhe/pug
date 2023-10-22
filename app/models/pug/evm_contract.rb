@@ -18,15 +18,21 @@ module Pug
   class EvmContract < ApplicationRecord
     belongs_to :network
 
-    def abi
+    def raw_abi
       read_abi
+    end
+
+    def raw_event_abi(name_or_signature)
+      raw_abi.find do |item|
+        item['type'] == 'event' && item['name'] == parsed_event_abi(name_or_signature).name
+      end
     end
 
     def parsed_abi
       @parsed_abi ||= parse_abi
     end
 
-    def event_abi(name_or_signature)
+    def parsed_event_abi(name_or_signature)
       if hex? name_or_signature
         parsed_abi.events.find do |event|
           event.signature == remove_0x(name_or_signature)
@@ -45,8 +51,29 @@ module Pug
     def name
       abi_file.split('/').last.split('-')[0].underscore
     end
+    alias contract_name name
+
+    def event_columns(name_or_signature)
+      event_inputs = raw_event_abi(name_or_signature).fetch('inputs', [])
+      params = get_params(event_inputs)
+      build_columns(params)
+    end
+
+    def event_model_name(name_or_signature)
+      event_name = parsed_event_abi(name_or_signature).name
+      model_name = "#{contract_name.underscore}_#{event_name.underscore}"
+      if model_name.pluralize.length > 63
+        model_name = "#{shorten_string(contract_name.underscore)}_#{event_name.underscore}"
+      end
+      model_name.camelize
+    end
 
     private
+
+    def shorten_string(string)
+      words = string.split('_')
+      words.map { |word| word[0] }.join('')
+    end
 
     def hex?(str)
       str = remove_0x(str)
@@ -62,11 +89,74 @@ module Pug
     def parse_abi
       filename = abi_file.split('/').last
       name = filename.split('-')[0]
-      Eth::Contract.from_abi(abi: read_abi, address: address, name: name)
+      Eth::Contract.from_abi(abi: read_abi, address:, name:)
     end
 
     def read_abi
       JSON.parse(File.read(abi_file))
+    end
+
+    def build_columns(params)
+      params
+        .reduce([]) { |acc, param| acc + flat('p', param) }
+        .map { |param| [param[0], to_rails_type(param[1])] }
+    end
+
+    def to_rails_type(abi_type)
+      if abi_type == 'address'
+        'string'
+      elsif abi_type == 'bool'
+        'boolean'
+      elsif abi_type =~ /uint\d+/
+        'integer'
+      elsif abi_type =~ /int\d+/
+        'integer'
+      elsif abi_type =~ /bytes\d*/
+        'string'
+      else
+        abi_type
+      end
+    end
+
+    def flat(prefix, param)
+      param_name, param_content = param
+      param_name = param_name.underscore
+
+      if param_content.is_a?(String)
+        return [[param_name, param_content]] if prefix.nil?
+
+        [["#{prefix}_#{param_name}", param_content]]
+      elsif param_content.is_a?(Array)
+        result = []
+        param_content.each do |inner_param|
+          result += flat("#{prefix}_#{param_name}", inner_param)
+        end
+        result
+      end
+    end
+
+    # returns:
+    # [
+    #   ["root", "bytes32"],
+    #   ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
+    # ]
+    def get_params(inputs)
+      inputs.map do |input|
+        type(input)
+      end
+    end
+
+    # result examples:
+    # ["root", "bytes32"]
+    # ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
+    def type(input)
+      if input['type'] == 'tuple'
+        [input['name'], input['components'].map { |c| type(c) }]
+      elsif input['type'] == 'enum'
+        [input['name'], 'uint8']
+      else
+        [input['name'], input['type']]
+      end
     end
   end
 end
