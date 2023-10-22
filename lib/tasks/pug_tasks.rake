@@ -31,7 +31,7 @@ module Pug
     end
 
     def get_contract_abi(chain_id, address)
-      network_name = Pug::Network.find_by(chain_id: chain_id).name
+      network_name = Pug::Network.find_by(chain_id:).name
       raise "Network with chain_id #{chain_id} not found" if network_name&.nil?
 
       raise 'No explorer api found for this network' unless Api::Etherscan.respond_to? network_name
@@ -75,7 +75,7 @@ module Pug
           timestamp: Time.at(creation_timestamp)
         }
       elsif Api::Subscan.respond_to? network.name
-        data = Api::Subscan.send(network.name).evm_contract({ address: address })
+        data = Api::Subscan.send(network.name).evm_contract({ address: })
         raise "Contract with address #{address} not found on subscan" if data.blank?
 
         {
@@ -201,7 +201,7 @@ module Pug
 
       puts "scanned `#{network.name}/#{contract.address}` in [#{from_block},#{last_scanned_block}]"
       block.call logs, last_scanned_block
-      contract.update(last_scanned_block: last_scanned_block)
+      contract.update(last_scanned_block:)
     end
   end
 end
@@ -253,7 +253,7 @@ namespace :pug do
       next
     end
 
-    network = Pug::Network.find_by(chain_id: chain_id)
+    network = Pug::Network.find_by(chain_id:)
     raise "Network with chain_id #{chain_id} not found" if network.nil?
 
     creation_info = Pug.get_creation_info(network, address)
@@ -261,7 +261,7 @@ namespace :pug do
     Pug::EvmContract.create!(
       network_id: network.id,
       address: address.downcase,
-      abi_file: abi_file,
+      abi_file:,
       creator: creation_info[:creator],
       creation_tx_hash: creation_info[:tx_hash],
       creation_block: creation_info[:block],
@@ -286,7 +286,7 @@ namespace :pug do
     next if result.blank?
 
     chain_id = result.split(',')[0].strip
-    network = Pug::Network.find_by(chain_id: chain_id)
+    network = Pug::Network.find_by(chain_id:)
 
     network.attributes.except('id').each do |k, v|
       print "#{k}: "
@@ -325,7 +325,17 @@ namespace :pug do
   desc 'Print procfile items for contracts'
   task print_procfile: :environment do
     Pug::EvmContract.all.each do |contract|
-      puts "#{contract.name}: bin/rails \"fetch_logs[#{contract.network.chain_id},#{contract.address}]\""
+      puts "#{contract.name}: bin/rails \"pug:fetch_logs[#{contract.network.chain_id},#{contract.address}]\""
+    end
+  end
+
+  desc 'Reset contracts to creation block'
+  task reset_contracts: :environment do
+    Pug::EvmContract.all.each do |contract|
+      contract.update(last_scanned_block: contract.creation_block)
+      puts "== chain_id: #{contract.network.chain_id}, address: #{contract.address}, reset from #{contract.last_scanned_block} to #{contract.creation_block}"
+      count = Pug::EvmLog.where(evm_contract_id: contract.id).delete_all
+      puts "   deleted #{count} logs"
     end
   end
 
@@ -336,7 +346,7 @@ namespace :pug do
     network = Pug::Network.find_by(chain_id: args[:chain_id])
     raise "Network with chain_id #{args[:chain_id]} not found" if network.nil?
 
-    contract = Pug::EvmContract.find_by(network: network, address: args[:address])
+    contract = Pug::EvmContract.find_by(network:, address: args[:address])
     raise "Contract with address #{args[:address]} not found" if contract.nil?
 
     loop do
