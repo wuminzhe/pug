@@ -26,6 +26,8 @@ module Pug
       files = filenames.map do |filename|
         "#{dir}/#{filename}"
       end
+      # TODO: check fzf installed
+      # `fzf --version`
       result = `echo "#{files.join("\n")}" | fzf --preview 'cat {}'`
       result.blank? ? nil : result.strip
     end
@@ -248,9 +250,20 @@ namespace :pug do
   end
 
   desc 'Print procfile items for contracts'
-  task print_procfile: :environment do
-    Pug::EvmContract.all.each do |contract|
-      puts "#{contract.name}: bin/rails \"pug:fetch_logs[#{contract.network.chain_id},#{contract.address}]\""
+  task generate_procfile: :environment do
+    File.open('Procfile.pug', 'w') do |f|
+      Pug::EvmContract.all.each do |contract|
+        f.puts "#{contract.network.name}_#{contract.name}: bin/rails \"pug:fetch_logs[#{contract.network.chain_id},#{contract.address}]\""
+      end
+    end
+
+    # copy ./bin/pug to host app if not exists.
+    pug_cli = File.expand_path('../../bin/pug', __dir__)
+    dest = Rails.root.join('bin', 'pug')
+    unless File.exist?(dest)
+      FileUtils.cp(pug_cli, dest)
+      FileUtils.chmod('+x', dest)
+      puts "Copied #{pug_cli} to #{dest}"
     end
   end
 
