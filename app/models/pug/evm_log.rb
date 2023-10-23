@@ -115,6 +115,7 @@ module Pug
       decoded_data = Abicoder.decode(data_types, hex(data))
 
       event_column_values = decoded_topics + decoded_data
+      # TODO: better b2h
       event_column_values = event_column_values.map do |v|
         b2h(v)
       end
