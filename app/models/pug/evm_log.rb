@@ -112,9 +112,12 @@ module Pug
 
       # DATA
       data_types = data_inputs.map { |i| type(i) }
-      decoded_data = Abicoder.decode(data_types, data)
+      decoded_data = Abicoder.decode(data_types, hex(data))
 
       event_column_values = decoded_topics + decoded_data
+      event_column_values = event_column_values.map do |v|
+        b2h(v)
+      end
 
       #########################################
       # 3 - find model for this event then save
@@ -123,8 +126,25 @@ module Pug
       raise "No model for event #{topic0}" if event_model_class.nil?
 
       record = Hash[event_column_names.zip(event_column_values)]
+      p "record: #{record}"
       record[:pug_evm_log] = self
       event_model_class.create!(record)
+    end
+
+    def b2h(v)
+      if v.is_a?(String) && v.encoding == Encoding::ASCII_8BIT
+        binary_to_hex(v)
+      elsif v.is_a?(Array)
+        v.map { |sub_v| b2h(sub_v) }
+      else
+        v
+      end
+    end
+
+    # binary string example:
+    #   "\xF6T\xC1~\xA8\x91\b\xD7\x18>\xAF1\xC7b\xFE\f\x12]Gj\xA8\x13\t8\xD8\xA1\x89S\a\xB7\xDBZ"
+    def binary_to_hex(binary)
+      "0x#{binary.unpack1('H*')}"
     end
 
     # ['bytes32', 'tuple']
