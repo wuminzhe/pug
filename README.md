@@ -2,7 +2,17 @@
 Short description and motivation.
 
 ## Usage
-How to use my plugin.
+
+```bash
+rails pug:install:migrations
+rails db:migrate
+
+rails pug:add_contract[chain_id,address]
+rails pug:generate_models
+rails db:migrate
+rails pug:generate_procfile
+
+```
 
 ## Installation
 Add this line to your application's Gemfile:
