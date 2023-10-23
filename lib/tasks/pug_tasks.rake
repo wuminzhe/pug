@@ -53,11 +53,18 @@ module Pug
     rescue StandardError => e
       raise e unless e.message.include? 'No explorer api found for this network'
 
+      file = find_abi_from_db_with_same_address(address)
+      return file unless file.nil?
+
       puts e.message
       puts 'Select abi file from local'
 
       # select abi file if not found on etherscan
       select_abi
+    end
+
+    def find_abi_from_db_with_same_address(address)
+      EvmContract.find_by(address:)&.abi_file
     end
 
     def get_creation_info(network, address)
@@ -172,7 +179,7 @@ namespace :pug do
   desc 'Add a contract'
   task :add_contract, %i[chain_id address] => :environment do |_t, args|
     chain_id = args[:chain_id]
-    address = args[:address]
+    address = args[:address].downcase
 
     abi_file = Pug.prepare_abi(chain_id, address)
     if abi_file.nil?
@@ -187,7 +194,7 @@ namespace :pug do
 
     Pug::EvmContract.create!(
       network_id: network.id,
-      address: address.downcase,
+      address:,
       abi_file:,
       creator: creation_info[:creator],
       creation_tx_hash: creation_info[:tx_hash],
@@ -260,10 +267,12 @@ namespace :pug do
     # copy ./bin/pug to host app if not exists.
     pug_cli = File.expand_path('../../bin/pug', __dir__)
     dest = Rails.root.join('bin', 'pug')
-    unless File.exist?(dest)
+    if File.exist?(dest)
+      puts "#{dest} exists"
+    else
       FileUtils.cp(pug_cli, dest)
       FileUtils.chmod('+x', dest)
-      puts "Copied #{pug_cli} to #{dest}"
+      puts "create #{dest}"
     end
   end
 
