@@ -101,10 +101,14 @@ module Pug
 
       # TOPICS(indexed)
       topic_types = topic_inputs.map { |i| i['type'] }
+
       # If event is anonymous, all topics are arguments. Otherwise, the first
       # topic will be the event signature.
       topics_without_signature = topics[1..] if raw_event_abi['anonymous'] == false
-      decoded_topics = topics_without_signature.map.with_index { |t, i| Abicoder.decode([topic_types[i]], t)[0] }
+      decoded_topics = topics_without_signature.map.with_index do |topic, i|
+        topic_type = topic_types[i]
+        Abicoder.decode([topic_type], hex(topic))[0]
+      end
 
       # DATA
       data_types = data_inputs.map { |i| type(i) }
