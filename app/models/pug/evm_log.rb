@@ -115,10 +115,7 @@ module Pug
       decoded_data = Abicoder.decode(data_types, hex(data))
 
       event_column_values = decoded_topics + decoded_data
-      # TODO: better b2h
-      event_column_values = event_column_values.map do |v|
-        b2h(v)
-      end
+      event_column_values = b2h(event_column_values)
 
       #########################################
       # 3 - find model for this event then save
@@ -137,6 +134,8 @@ module Pug
         binary_to_hex(v)
       elsif v.is_a?(Array)
         v.map { |sub_v| b2h(sub_v) }
+      elsif v.is_a?(Hash)
+        v.transform_values { |sub_v| b2h(sub_v) }
       else
         v
       end
