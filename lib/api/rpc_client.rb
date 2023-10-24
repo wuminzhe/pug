@@ -161,7 +161,7 @@ module Api
       resp =
         client.eth_get_logs(
           {
-            address: address,
+            address:,
             topics: [event_signatures],
             from_block: to_hex(from_block),
             to_block: to_hex(to_block)

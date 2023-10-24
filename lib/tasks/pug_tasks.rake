@@ -119,6 +119,27 @@ module Pug
       end
     end
 
+    def scan_logs_of_network(network, &block)
+      from_block = network.last_scanned_block + 1
+
+      contract_event_sigs = network.evm_contracts.map do |contract|
+        contract.event_signatures
+      end.flatten.uniq
+      logs, last_scanned_block = network.client.get_logs(
+        network.evm_contracts.pluck(:address),
+        contract_event_sigs,
+        from_block,
+        network.scan_span
+      )
+
+      # process logs
+      nil if last_scanned_block <= from_block
+
+      puts "scanned `#{network.name}` in [#{from_block},#{last_scanned_block}]"
+      block.call logs, last_scanned_block
+      network.update(last_scanned_block:)
+    end
+
     def scan_logs_of_contract(network, contract, &block)
       # get logs from blockchain node
       from_block = contract.last_scanned_block + 1
@@ -202,6 +223,10 @@ namespace :pug do
       creation_timestamp: creation_info[:timestamp],
       last_scanned_block: creation_info[:block]
     )
+
+    network.update!(last_scanned_block: creation_info[:block]) if network.last_scanned_block < creation_info[:block]
+
+    puts "Contract #{address} on '#{network.display_name}' added"
   end
 
   desc 'Generate models for contracts'
@@ -283,6 +308,33 @@ namespace :pug do
       puts "== chain_id: #{contract.network.chain_id}, address: #{contract.address}, reset from #{contract.last_scanned_block} to #{contract.creation_block}"
       count = Pug::EvmLog.where(evm_contract_id: contract.id).delete_all
       puts "   deleted #{count} logs"
+    end
+  end
+
+  desc 'Fetch logs of all contracts(serial processing)'
+  task fetch_logs_all: :environment do
+    $stdout.sync = true
+
+    loop do
+      Pug::EvmContract.all.each do |contract|
+        network = contract.network
+
+        begin
+          ActiveRecord::Base.transaction do
+            Pug.scan_logs_of_network(network) do |logs|
+              logs.each do |log|
+                Pug::EvmLog.create_from(network, log)
+              end
+            end
+          end
+        rescue StandardError => e
+          puts e.message
+          puts e.backtrace.join("\n") unless e.message.include? 'timeout'
+          sleep 2
+        end
+      end
+
+      sleep 2
     end
   end
 

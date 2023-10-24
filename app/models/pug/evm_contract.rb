@@ -45,7 +45,7 @@ module Pug
     end
 
     def event_signatures
-      parsed_abi.events.map(&:signature)
+      parsed_abi.events.map(&:signature).map { |sig| "0x#{sig}" }
     end
 
     def name

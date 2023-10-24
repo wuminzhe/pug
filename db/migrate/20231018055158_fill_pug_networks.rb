@@ -1,4 +1,4 @@
-class FillNetworks < ActiveRecord::Migration[7.1]
+class FillPugNetworks < ActiveRecord::Migration[7.1]
   def up
     require 'open-uri'
     require 'json'
