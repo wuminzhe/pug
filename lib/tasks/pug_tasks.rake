@@ -118,7 +118,7 @@ module Pug
         # p "rails g evm_event_model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework"
         unless Rails.root.join('app', 'models', 'pug', "#{model_name.underscore}.rb").exist?
           belongs_to_str = 'pug_evm_log:belongs_to pug_evm_contract:belongs_to pug_network:belongs_to'
-          system("./bin/rails g evm_event_model Pug::#{model_name} #{belongs_to_str} #{columns_str} --no-test-framework")
+          system("./bin/rails g evm_event_model Pug::#{model_name} #{belongs_to_str} #{columns_str} --timestamps --no-test-framework")
         end
       end
     end
@@ -303,6 +303,10 @@ namespace :pug do
       end
       puts "   cmd: rails \"fetch_logs[#{contract.network.chain_id},#{contract.address}]\""
     end
+  end
+
+  desc 'Show events of a contract'
+  task :show_events, %i[chain_id address] => :environment do |_t, args|
   end
 
   desc 'Print procfile items for contracts'
