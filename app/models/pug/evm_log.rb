@@ -25,6 +25,9 @@ module Pug
     belongs_to :evm_contract
     belongs_to :network
 
+    alias contract evm_contract
+    alias_attribute :signature, :topic0
+
     def self.create_from(network, log)
       not_existed = find_by(
         network:,
@@ -124,6 +127,7 @@ module Pug
       raise "No model for event #{topic0}" if event_model_class.nil?
 
       record = Hash[event_column_names.zip(event_column_values)]
+      p event_model_class.name
       p record
       record[:pug_evm_log] = self
       event_model_class.create!(record)

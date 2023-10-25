@@ -3,6 +3,8 @@ class <%= class_name %> < <%= parent_class_name.classify %>
 <% attributes.select(&:reference?).each do |attribute| -%>
 <% if attribute.name == "pug_evm_log" -%>
   belongs_to :pug_evm_log, class_name: 'Pug::EvmLog'<%= ", polymorphic: true" if attribute.polymorphic? %>
+  alias evm_log pug_evm_log
+
 <% else -%>
   belongs_to :<%= attribute.name %><%= ", polymorphic: true" if attribute.polymorphic? %>
 <% end -%>
