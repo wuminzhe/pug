@@ -32,6 +32,11 @@ module Pug
       @parsed_abi ||= parse_abi
     end
 
+    def parsed_events_abi
+      parsed_abi.events
+    end
+    alias events parsed_events_abi
+
     def parsed_event_abi(name_or_signature)
       if hex? name_or_signature
         parsed_abi.events.find do |event|
@@ -96,9 +101,10 @@ module Pug
       JSON.parse(File.read(abi_file))
     end
 
+    # TODO: prefix config
     def build_columns(params)
       params
-        .reduce([]) { |acc, param| acc + flat('p', param) }
+        .reduce([]) { |acc, param| acc + Pug::Utils.flat(nil, param) }
         .map { |param| [param[0], to_rails_type(param[1])] }
     end
 
@@ -122,26 +128,9 @@ module Pug
       end
     end
 
-    def flat(prefix, param)
-      param_name, param_content = param
-      param_name = param_name.underscore
-
-      if param_content.is_a?(String)
-        return [[param_name, param_content]] if prefix.nil?
-
-        [["#{prefix}_#{param_name}", param_content]]
-      elsif param_content.is_a?(Array)
-        result = []
-        param_content.each do |inner_param|
-          result += flat("#{prefix}_#{param_name}", inner_param)
-        end
-        result
-      end
-    end
-
     # returns:
     # [
-    #   ["root", "bytes32"],
+    #   ["root", "bytes32"], <-------- name, type(content)
     #   ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
     # ]
     def get_params(inputs)
