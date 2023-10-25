@@ -117,7 +117,8 @@ module Pug
       else
         # p "rails g evm_event_model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework"
         unless Rails.root.join('app', 'models', 'pug', "#{model_name.underscore}.rb").exist?
-          system("./bin/rails g evm_event_model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework")
+          belongs_to_str = 'pug_evm_log:belongs_to pug_evm_contract:belongs_to pug_network:belongs_to'
+          system("./bin/rails g evm_event_model Pug::#{model_name} #{belongs_to_str} #{columns_str} --no-test-framework")
         end
       end
     end
