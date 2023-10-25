@@ -1,5 +1,6 @@
 require 'pug/version'
 require 'pug/engine'
+require 'pug/utils'
 require 'api/etherscan'
 require 'api/subscan'
 require 'api/rpc_client'

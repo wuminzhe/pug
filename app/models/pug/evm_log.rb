@@ -118,7 +118,7 @@ module Pug
       decoded_data = Abicoder.decode(data_types, hex(data))
 
       event_column_values = decoded_topics + decoded_data
-      event_column_values = b2h(event_column_values).flatten
+      event_column_values = transform_values(event_column_values).flatten
 
       #########################################
       # 3 - find model for this event then save
@@ -133,13 +133,17 @@ module Pug
       event_model_class.create!(record)
     end
 
-    def b2h(v)
+    def transform_values(v)
       if v.is_a?(String) && v.encoding == Encoding::ASCII_8BIT
         binary_to_hex(v)
+      elsif v.is_a?(String) && Utils.hex?(v)
+        return "0x#{v}" unless v.start_with?('0x')
+
+        v
       elsif v.is_a?(Array)
-        v.map { |sub_v| b2h(sub_v) }
+        v.map { |sub_v| transform_values(sub_v) }
       elsif v.is_a?(Hash)
-        v.transform_values { |sub_v| b2h(sub_v) }
+        v.transform_values { |sub_v| transform_values(sub_v) }
       else
         v
       end
