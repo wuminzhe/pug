@@ -118,7 +118,7 @@ module Pug
       decoded_data = Abicoder.decode(data_types, hex(data))
 
       event_column_values = decoded_topics + decoded_data
-      event_column_values = b2h(event_column_values)
+      event_column_values = b2h(event_column_values).flatten
 
       #########################################
       # 3 - find model for this event then save
