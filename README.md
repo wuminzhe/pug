@@ -4,13 +4,23 @@ Short description and motivation.
 ## Usage
 
 ```bash
+# Setup:
+rails db:create
 rails pug:install:migrations
 rails db:migrate
 
+# Add contracts:
 rails pug:add_contract[chain_id,address]
-rails pug:generate_models
+rails pug:add_contract[chain_id,address]
+# ...
+rails pug:generate_event_models
 rails db:migrate
+
+# sync data
+rails pug:fetch_logs_all
+# or
 rails pug:generate_procfile
+./bin/pug
 
 ```
 
