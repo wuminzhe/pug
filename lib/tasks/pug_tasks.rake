@@ -115,8 +115,24 @@ module Pug
       if Pug.const_defined?(model_name)
         puts "    model already exists: Pug::#{model_name}"
       else
-        system("./bin/rails g evm_event_model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework")
+        # p "rails g evm_event_model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework"
+        unless Rails.root.join('app', 'models', 'pug', "#{model_name.underscore}.rb").exist?
+          system("./bin/rails g evm_event_model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework")
+        end
       end
+    end
+
+    def delete_models(evm_contract)
+      evm_contract.event_signatures.each do |event_signature|
+        delete_model(evm_contract, event_signature)
+      end
+    end
+
+    def delete_model(contract, event_signature)
+      # model name
+      model_name = contract.event_model_name(event_signature)
+
+      system("./bin/rails d evm_event_model Pug::#{model_name}")
     end
 
     def scan_logs_of_network(network, &block)
@@ -229,10 +245,17 @@ namespace :pug do
     puts "Contract #{address} on '#{network.display_name}' added"
   end
 
-  desc 'Generate models for contracts'
-  task generate_models: :environment do
+  desc 'Generate event models'
+  task generate_event_models: :environment do
     Pug::EvmContract.all.each do |contract|
       Pug.generate_models(contract)
+    end
+  end
+
+  desc 'Clear event models'
+  task clear_event_models: :environment do
+    Pug::EvmContract.all.each do |evm_contract|
+      Pug.delete_models(evm_contract)
     end
   end
 
@@ -316,22 +339,27 @@ namespace :pug do
     $stdout.sync = true
 
     loop do
+      networks = []
+      # get the networks from contracts
       Pug::EvmContract.all.each do |contract|
-        network = contract.network
+        next if networks.include?(contract.network)
 
-        begin
-          ActiveRecord::Base.transaction do
-            Pug.scan_logs_of_network(network) do |logs|
-              logs.each do |log|
-                Pug::EvmLog.create_from(network, log)
-              end
+        networks << contract.network
+      end
+
+      puts "== ROUND: #{Time.now} ==============="
+      networks.each do |network|
+        ActiveRecord::Base.transaction do
+          Pug.scan_logs_of_network(network) do |logs|
+            logs.each do |log|
+              Pug::EvmLog.create_from(network, log)
             end
           end
-        rescue StandardError => e
-          puts e.message
-          puts e.backtrace.join("\n") unless e.message.include? 'timeout'
-          sleep 2
         end
+      rescue StandardError => e
+        puts e.message
+        puts e.backtrace.join("\n") unless e.message.include? 'timeout'
+        sleep 2
       end
 
       sleep 2
