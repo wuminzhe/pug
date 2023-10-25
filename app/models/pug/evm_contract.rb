@@ -65,7 +65,7 @@ module Pug
       if model_name.pluralize.length > 63
         model_name = "#{shorten_string(contract_name.underscore)}_#{event_name.underscore}"
       end
-      model_name.camelize
+      model_name.singularize.camelize
     end
 
     private
@@ -107,10 +107,14 @@ module Pug
         'string'
       elsif abi_type == 'bool'
         'boolean'
-      elsif abi_type =~ /uint\d+/
-        'integer'
+      elsif abi_type == 'uint256'
+        'decimal{78,0}'
+      elsif abi_type == 'uint128'
+        'decimal{39,0}'
+      elsif abi_type == 'uint64'
+        'decimal{20,0}'
       elsif abi_type =~ /int\d+/
-        'integer'
+        'bigint'
       elsif abi_type =~ /bytes\d*/
         'string'
       else

@@ -124,7 +124,7 @@ module Pug
       raise "No model for event #{topic0}" if event_model_class.nil?
 
       record = Hash[event_column_names.zip(event_column_values)]
-      p "record: #{record}"
+      p record
       record[:pug_evm_log] = self
       event_model_class.create!(record)
     end
