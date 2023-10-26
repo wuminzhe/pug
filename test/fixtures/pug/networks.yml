@@ -16,12 +16,12 @@ one:
   chain_id: 1
   name: MyString
   display_name: MyString
-  rpc_list: 
+  rpc: 
   scan_span: 1
 
 two:
   chain_id: 1
   name: MyString
   display_name: MyString
-  rpc_list: 
+  rpc: 
   scan_span: 1

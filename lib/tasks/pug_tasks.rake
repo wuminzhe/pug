@@ -73,7 +73,7 @@ module Pug
         raise "Contract with address #{address} not found on etherscan" if data.empty?
 
         # TODO: check the rpc is available
-        client = Api::RpcClient.new(network.rpc_list.first)
+        client = Api::RpcClient.new(network.rpc)
         creation_block = client.eth_get_transaction_by_hash(data[0]['txHash'])['blockNumber'].to_i(16)
         creation_timestamp = client.get_block_by_number(creation_block)['timestamp'].to_i(16)
 

@@ -9,7 +9,7 @@ class FillPugNetworks < ActiveRecord::Migration[7.1]
         chain_id: network['chainId'],
         name: network['shortName'].underscore,
         display_name: network['name'],
-        rpc_list: network['rpc'],
+        rpc: network['rpc']&.[](0),
         scan_span: 5000
       )
     end

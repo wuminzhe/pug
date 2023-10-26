@@ -16,7 +16,9 @@ module Pug
     has_many :evm_contracts
 
     def client
-      Api::RpcClient.new(rpc_list.first)
+      raise 'rpc is empty' if rpc.blank?
+
+      Api::RpcClient.new(rpc)
     end
   end
 end

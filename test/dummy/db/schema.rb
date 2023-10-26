@@ -53,7 +53,7 @@ ActiveRecord::Schema[7.1].define(version: 2023_10_19_000315) do
     t.integer "chain_id"
     t.string "name"
     t.string "display_name"
-    t.json "rpc_list"
+    t.string "rpc"
     t.integer "scan_span", default: 5000
     t.integer "last_scanned_block", default: 0
     t.datetime "created_at", null: false
