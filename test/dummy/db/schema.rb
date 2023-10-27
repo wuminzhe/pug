@@ -50,7 +50,7 @@ ActiveRecord::Schema[7.1].define(version: 2023_10_19_000315) do
   end
 
   create_table "pug_networks", force: :cascade do |t|
-    t.integer "chain_id"
+    t.bigint "chain_id"
     t.string "name"
     t.string "display_name"
     t.string "rpc"
