@@ -175,6 +175,33 @@ module Pug
       block.call logs, last_scanned_block
       contract.update(last_scanned_block:)
     end
+
+    # get the networks from contracts
+    def active_networks
+      Pug::EvmContract.all.each_with_object([]) do |contract, acc|
+        acc << contract.network unless acc.include?(contract.network)
+      end
+    end
+
+    def filter_rpc_list(rpc_list)
+      rpc_list&.select { |rpc| rpc.start_with?('http') && rpc !~ /\$\{(.+)\}/ }
+    end
+
+    def active_networks_fastest_rpc
+      chains = JSON.parse(URI.open('https://chainid.network/chains_mini.json').read)
+      rpc_list_by_chain = chains.map do |chain|
+        [chain['chainId'], chain['rpc']]
+      end.to_h
+
+      active_networks.map do |network|
+        rpc_list = rpc_list_by_chain[network.chain_id]
+        return [network.chain_id, nil, nil] if rpc_list.nil?
+
+        rpc_list = filter_rpc_list(rpc_list)
+        fastest_rpc = Pug::Utils.fastest_rpc(rpc_list)
+        [network.chain_id, fastest_rpc].flatten
+      end
+    end
   end
 end
 
@@ -189,6 +216,10 @@ task :pug do
 end
 
 namespace :pug do
+  desc 'Init database'
+  task db_prepare: [:environment, 'db:create', 'pug:install:migrations', 'db:migrate', 'db:seed', 'db:migrate'] do
+  end
+
   # example:
   # rails "app:add_contract_abi_from_file[Relayer, /workspaces/pug/test/dummy/public/abis/Relayer-b47bf80ce9.json]"
   desc 'Add contract abi from file'
@@ -219,14 +250,18 @@ namespace :pug do
     chain_id = args[:chain_id]
     address = args[:address].downcase
 
+    network = Pug::Network.find_by(chain_id:)
+    raise "Network with chain_id #{chain_id} not found" if network.nil?
+
+    # check if contract exists
+    contract = Pug::EvmContract.find_by(network:, address:)
+    raise "Contract with address #{address} on #{chain_id} already exists" unless contract.nil?
+
     abi_file = Pug.prepare_abi(chain_id, address)
     if abi_file.nil?
       puts 'No abi file found or selected.'
       next
     end
-
-    network = Pug::Network.find_by(chain_id:)
-    raise "Network with chain_id #{chain_id} not found" if network.nil?
 
     creation_info = Pug.get_creation_info(network, address)
 
@@ -344,16 +379,8 @@ namespace :pug do
     $stdout.sync = true
 
     loop do
-      networks = []
-      # get the networks from contracts
-      Pug::EvmContract.all.each do |contract|
-        next if networks.include?(contract.network)
-
-        networks << contract.network
-      end
-
       puts "== ROUND: #{Time.now} ==============="
-      networks.each do |network|
+      Pug.active_networks.each do |network|
         ActiveRecord::Base.transaction do
           Pug.scan_logs_of_network(network) do |logs|
             logs.each do |log|
@@ -395,6 +422,35 @@ namespace :pug do
       puts e.message
       puts e.backtrace.join("\n") unless e.message.include? 'timeout'
       sleep 10
+    end
+  end
+
+  desc 'Fastest rpc of networks'
+  task fastest_rpcs: :environment do
+    p Pug.active_networks_fastest_rpc
+  end
+
+  desc 'Update network rpc'
+  task update_rpc: :environment do
+    loop do
+      fastest_rpcs = Pug.active_networks_fastest_rpc
+      fastest_rpcs.each do |chain_id, rpc, _|
+        next unless rpc.present?
+
+        network = Pug::Network.find_by(chain_id:)
+        if network.rpc != rpc
+          network.update!(rpc:)
+          puts "#{network.display_name}'s rpc updated to: `#{rpc}`"
+        else
+          puts "#{network.display_name}'s rpc is already the fastest: `#{rpc}`"
+        end
+      end
+
+      sleep 60
+    rescue StandardError => e
+      puts e.message
+      puts e.backtrace.join("\n") unless e.message.include? 'timeout'
+      sleep 60
     end
   end
 end

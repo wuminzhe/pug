@@ -45,6 +45,35 @@ module Pug
           result
         end
       end
+
+      def command_exists?(command)
+        system("command -v #{command} > /dev/null 2>&1")
+      end
+
+      # returns: [ok?, time_total]
+      def rpc_ping(rpc)
+        command_exists?('curl') || raise('curl not found, please install it first.')
+
+        # 0.163253,1102
+        result = `curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"net_version","params": [],"id":1}' -m 5 -w "%{time_total},%{size_download}" -s -o /dev/null #{rpc}`.strip
+
+        time_total, size_download = result.split(',').map(&:to_f)
+
+        if size_download.zero? # means unreachable
+          [false, nil]
+        else
+          [true, time_total.to_f]
+        end
+      end
+
+      # returns: [rpc, time_total]
+      def fastest_rpc(rpc_list)
+        rpc_list.map { |rpc| [rpc, rpc_ping(rpc)] } # ["https://...", [true, 0.163253]]
+                .select { |_rpc, result| result[0] } # filter unreachable rpc
+                .map { |rpc, result| [rpc, result[1]] } # ["https://...", 0.163253]
+                .to_h
+                .min_by { |_, v| v }
+      end
     end
   end
 end
