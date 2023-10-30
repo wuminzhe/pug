@@ -216,10 +216,6 @@ task :pug do
 end
 
 namespace :pug do
-  desc 'Init database'
-  task db_prepare: [:environment, 'db:create', 'pug:install:migrations', 'db:migrate', 'db:seed', 'db:migrate'] do
-  end
-
   # example:
   # rails "app:add_contract_abi_from_file[Relayer, /workspaces/pug/test/dummy/public/abis/Relayer-b47bf80ce9.json]"
   desc 'Add contract abi from file'
