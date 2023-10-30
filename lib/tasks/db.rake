@@ -1,4 +1,4 @@
 namespace :db do
-  desc 'initialize database'
-  task init: ['db:drop', 'db:create', 'db:migrate', 'db:seed']
+  desc 'Rebuild database'
+  task rebuild: [:environment, 'db:drop', 'db:create', 'db:migrate', 'db:seed']
 end

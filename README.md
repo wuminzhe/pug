@@ -3,25 +3,22 @@ Short description and motivation.
 
 ## Usage
 
-```bash
-# Setup:
-rails db:create
-rails pug:install:migrations
-rails db:migrate
+install [fzf](https://github.com/junegunn/fzf)(optional)
 
-# Add contracts:
+```bash
+# SETUP
+rails pug:install:migrations
+rails db:prepare
+
+# ADD CONTRACTS AND THEN GENERATE EVENT MODELS
 rails pug:add_contract[chain_id,address]
 rails pug:add_contract[chain_id,address]
 # ...
 rails pug:generate_event_models
 rails db:migrate
 
-# sync data
+# SYNC DATA
 rails pug:fetch_logs_all
-# or
-rails pug:generate_procfile
-./bin/pug
-
 ```
 
 ## All rake tasks
