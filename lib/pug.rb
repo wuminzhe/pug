@@ -10,6 +10,7 @@ require 'pug/abicoder'
 
 require 'generators/evm_event_model/evm_event_model_generator'
 
+require 'json'
 #################################
 # Task helper methods
 #################################
@@ -198,6 +199,8 @@ module Pug
     end
 
     def active_networks_fastest_rpc
+      require 'open-uri'
+
       chains = JSON.parse(URI.open('https://chainid.network/chains_mini.json').read)
       rpc_list_by_chain = chains.map do |chain|
         [chain['chainId'], chain['rpc']]
