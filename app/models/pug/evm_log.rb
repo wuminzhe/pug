@@ -134,6 +134,8 @@ module Pug
       record[:pug_evm_log] = self
       record[:pug_evm_contract] = evm_contract
       record[:pug_network] = network
+      record[:block_number] = block_number
+      record[:timestamp] = timestamp
       event_model_class.create!(record)
     end
 
