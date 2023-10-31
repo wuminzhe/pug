@@ -3,10 +3,6 @@ require 'rails/generators/active_record/model/model_generator'
 
 class EvmEventModelGenerator < ActiveRecord::Generators::ModelGenerator
   source_root File.expand_path('templates', __dir__)
-  Rails::Generators.templates_path.each do |path|
-    source_paths << File.join(path, base_name, 'migration')
-  end
-  source_paths << File.expand_path(File.join(base_name, 'migration', 'templates'), base_root)
 
   def create_migration_file
     if options[:indexes] == false
