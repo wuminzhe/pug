@@ -131,12 +131,22 @@ module Pug
       p event_model_class.name
       p record
       puts ''
-      record[:pug_evm_log] = self
       record[:pug_evm_contract] = evm_contract
+      record[:pug_evm_log] = self
       record[:pug_network] = network
       record[:block_number] = block_number
+      record[:transaction_index] = transaction_index
+      record[:log_index] = log_index
       record[:timestamp] = timestamp
-      event_model_class.create!(record)
+
+      if event_model_class.find_by(
+        pug_network: record[:pug_network],
+        block_number: record[:block_number],
+        transaction_index: record[:transaction_index],
+        log_index: record[:log_index]
+      ).blank?
+        event_model_class.create!(record)
+      end
     end
 
     def transform_values(v)

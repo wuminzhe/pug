@@ -22,5 +22,6 @@ class <%= migration_class_name %> < ActiveRecord::Migration[<%= ActiveRecord::Mi
 <% attributes_with_index.each do |attribute| -%>
     add_index :<%= table_name %>, [:pug_network_id, :<%= attribute.index_name %>]<%= attribute.inject_index_options %>
 <% end -%>
+    add_index :<%= table_name %>, %i[pug_network_id block_number transaction_index log_index], unique: true
   end
 end

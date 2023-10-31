@@ -131,7 +131,7 @@ module Pug
         # p "rails g evm_event_model Pug::#{model_name} pug_evm_log:belongs_to #{columns_str} --no-test-framework"
         unless Rails.root.join('app', 'models', 'pug', "#{model_name.underscore}.rb").exist?
           belongs_to_str = 'pug_evm_log:belongs_to pug_evm_contract:belongs_to pug_network:belongs_to'
-          extra_columns_str = 'block_number:integer timestamp:datetime'
+          extra_columns_str = 'timestamp:datetime block_number:integer transaction_index:integer log_index:integer'
           system("./bin/rails g evm_event_model Pug::#{model_name} #{belongs_to_str} #{columns_str} #{extra_columns_str} --timestamps --no-test-framework")
         end
       end
