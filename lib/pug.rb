@@ -153,9 +153,10 @@ module Pug
     def scan_logs_of_network(network, &block)
       from_block = network.last_scanned_block + 1
 
-      contract_event_sigs = network.evm_contracts.map do |contract|
-        contract.event_signatures
-      end.flatten.uniq
+      # contract_event_sigs = network.evm_contracts.map do |contract|
+      #   contract.event_signatures
+      # end.flatten.uniq
+      contract_event_sigs = nil
       logs, last_scanned_block = network.client.get_logs(
         network.evm_contracts.pluck(:address),
         contract_event_sigs,
@@ -166,9 +167,10 @@ module Pug
       # process logs
       nil if last_scanned_block <= from_block
 
-      puts "scanned `#{network.name}` in [#{from_block},#{last_scanned_block}]"
       block.call logs, last_scanned_block
       network.update(last_scanned_block:)
+      puts "   Scanned `#{network.display_name}` in [#{from_block},#{last_scanned_block}]"
+      puts "\n"
     end
 
     def scan_logs_of_contract(network, contract, &block)
@@ -177,7 +179,8 @@ module Pug
 
       logs, last_scanned_block = network.client.get_logs(
         [contract.address],
-        contract.event_signatures,
+        # contract.event_signaturestract.event_signatures,
+        nil,
         from_block,
         network.scan_span
       )
@@ -185,7 +188,7 @@ module Pug
       # process logs
       return if last_scanned_block <= from_block
 
-      puts "scanned `#{network.name}/#{contract.address}` in [#{from_block},#{last_scanned_block}]"
+      puts "Scanned `#{network.display_name}/#{contract.address}` in [#{from_block},#{last_scanned_block}]"
       block.call logs, last_scanned_block
       contract.update(last_scanned_block:)
     end
@@ -218,3 +221,4 @@ module Pug
     end
   end
 end
+

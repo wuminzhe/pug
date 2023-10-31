@@ -65,7 +65,9 @@ namespace :pug do
       last_scanned_block: creation_info[:block]
     )
 
-    network.update!(last_scanned_block: creation_info[:block]) if network.last_scanned_block < creation_info[:block]
+    if network.last_scanned_block.zero? || creation_info[:block] < network.last_scanned_block
+      network.update!(last_scanned_block: creation_info[:block])
+    end
 
     puts "Contract #{address} on '#{network.display_name}' added"
   end
@@ -77,10 +79,11 @@ namespace :pug do
     end
   end
 
-  desc 'Clear event models'
-  task clear_event_models: :environment do
+  desc 'Remove all generated event models with their migrations, and delete evm_contracts'
+  task clear: :environment do
     Pug::EvmContract.all.each do |evm_contract|
       Pug.delete_models(evm_contract)
+      evm_contract.destroy!
     end
   end
 
@@ -129,10 +132,6 @@ namespace :pug do
     end
   end
 
-  desc 'Show events of a contract'
-  task :show_events, %i[chain_id address] => :environment do |_t, args|
-  end
-
   desc 'Print procfile items for contracts'
   task generate_procfile: :environment do
     File.open('Procfile.pug', 'w') do |f|
@@ -170,7 +169,7 @@ namespace :pug do
     loop do
       puts "== ROUND: #{Time.now} ==============="
       Pug.active_networks.each do |network|
-        puts "   #{network.display_name}"
+        puts "   - #{network.display_name}"
         ActiveRecord::Base.transaction do
           Pug.scan_logs_of_network(network) do |logs|
             logs.each do |log|
@@ -191,7 +190,7 @@ namespace :pug do
   desc "Reset networks' last_scanned_block"
   task reset_scan_cursor: :environment do
     Pug::EvmContract.all.each do |contract|
-      if contract.network.last_scanned_block < contract.creation_block
+      if contract.creation_block < contract.network.last_scanned_block
         contract.network.update!(last_scanned_block: contract.creation_block)
         puts "chain_id: #{contract.network.chain_id}, reset last_scanned_block to #{contract.creation_block}"
       end

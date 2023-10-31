@@ -138,14 +138,24 @@ module Api
       logs = []
 
       resp =
-        client.eth_get_logs(
-          {
-            address: addresses,
-            topics: [topics],
-            from_block: to_hex(from_block),
-            to_block: to_hex(to_block)
-          }
-        )
+        if topics.nil?
+          client.eth_get_logs(
+            {
+              address: addresses,
+              from_block: to_hex(from_block),
+              to_block: to_hex(to_block)
+            }
+          )
+        else
+          client.eth_get_logs(
+            {
+              address: addresses,
+              topics: [topics],
+              from_block: to_hex(from_block),
+              to_block: to_hex(to_block)
+            }
+          )
+        end
       raise resp['error'].to_json if resp['error']
 
       (logs + resp['result']).map { |log| rich(log) }

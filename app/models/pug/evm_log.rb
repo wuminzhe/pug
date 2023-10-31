@@ -127,8 +127,8 @@ module Pug
       raise "No model for event #{topic0}" if event_model_class.nil?
 
       record = Hash[event_column_names.zip(event_column_values)]
-      puts '=='
-      p event_model_class.name
+      puts "   #{event_model_class.name}"
+      print '   '
       p record
       puts ''
       record[:pug_evm_contract] = evm_contract
