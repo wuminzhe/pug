@@ -37,7 +37,6 @@ namespace :pug do
     abi = JSON.parse File.open(args[:abi_file]).read
 
     file = Pug.save(name, abi)
-    puts "Abi file: #{file}"
   end
 
   # example:
@@ -49,7 +48,6 @@ namespace :pug do
 
     name, abi = Pug.get_contract_abi(chain_id, address)
     file = Pug.save(name, abi)
-    puts "Abi file: #{file}"
   end
 
   # example:
