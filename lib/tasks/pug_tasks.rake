@@ -9,6 +9,26 @@ task :pug do
 end
 
 namespace :pug do
+  desc 'Fill networks'
+  task fill_networks: :environment do
+    require 'open-uri'
+    networks = JSON.parse(URI.open('https://chainid.network/chains.json').read)
+    ActiveRecord::Base.transaction do
+      networks.each do |network|
+        rpc = network['rpc']&.select { |url| url.start_with?('http') && url !~ /\$\{(.+)\}/ }&.first
+        explorer = network['explorers']&.first&.[]('url')
+        Pug::Network.create(
+          chain_id: network['chainId'],
+          name: network['shortName'].underscore,
+          display_name: network['name'],
+          rpc:,
+          explorer:,
+          scan_span: 2000
+        )
+      end
+    end
+  end
+
   # example:
   # rails "app:add_contract_abi_from_file[Relayer, /workspaces/pug/test/dummy/public/abis/Relayer-b47bf80ce9.json]"
   desc 'Add contract abi from file'
