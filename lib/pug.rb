@@ -60,9 +60,7 @@ module Pug
     def prepare_abi(chain_id, address)
       # fetch abi from etherscan first.
       name, abi = get_contract_abi(chain_id, address)
-      file = save(name, abi)
-      puts "Abi file: #{file}"
-      file
+      save(name, abi)
     rescue StandardError => e
       raise e unless e.message.include? 'No explorer api found for this network'
 
@@ -221,4 +219,3 @@ module Pug
     end
   end
 end
-
