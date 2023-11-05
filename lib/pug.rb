@@ -60,7 +60,8 @@ module Pug
     def prepare_abi(chain_id, address)
       # fetch abi from etherscan first.
       name, abi = get_contract_abi(chain_id, address)
-      save(name, abi)
+      file = save(name, abi)
+      [name, file]
     rescue StandardError => e
       raise e unless e.message.include? 'No explorer api found for this network'
 
@@ -71,7 +72,9 @@ module Pug
       puts 'Select abi file from local'
 
       # select abi file if not found on etherscan
-      select_abi
+      file = select_abi
+      name = File.basename(file, '.json').split('-')[0]
+      [name, file]
     end
 
     def find_abi_from_db_with_same_address(address)

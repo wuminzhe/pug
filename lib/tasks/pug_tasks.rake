@@ -64,7 +64,7 @@ namespace :pug do
     contract = Pug::EvmContract.find_by(network:, address:)
     raise "Contract with address #{address} on #{chain_id} already exists" unless contract.nil?
 
-    abi_file = Pug.prepare_abi(chain_id, address)
+    name, abi_file = Pug.prepare_abi(chain_id, address)
     if abi_file.nil?
       puts 'No abi file found or selected.'
       next
@@ -75,6 +75,7 @@ namespace :pug do
     Pug::EvmContract.create!(
       network_id: network.id,
       address:,
+      name:,
       abi_file:,
       creator: creation_info[:creator],
       creation_tx_hash: creation_info[:tx_hash],

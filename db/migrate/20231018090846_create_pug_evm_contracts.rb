@@ -3,6 +3,7 @@ class CreatePugEvmContracts < ActiveRecord::Migration[7.1]
     create_table :pug_evm_contracts do |t|
       t.integer :network_id
       t.string :address
+      t.string :name
       t.string :abi_file
       t.string :creator
       t.integer :creation_block

@@ -53,10 +53,7 @@ module Pug
       parsed_abi.events.map(&:signature).map { |sig| "0x#{sig}" }
     end
 
-    def name
-      abi_file.split('/').last.split('-')[0].underscore
-    end
-    alias contract_name name
+    alias_attribute :contract_name, :name
 
     def event_columns(name_or_signature)
       event_inputs = raw_event_abi(name_or_signature).fetch('inputs', [])
