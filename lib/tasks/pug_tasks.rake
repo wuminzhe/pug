@@ -188,7 +188,7 @@ namespace :pug do
     loop do
       puts "== ROUND: #{Time.now} ==============="
       Pug.active_networks.each do |network|
-        puts "   - #{network.display_name}"
+        puts "-- #{network.display_name}"
         ActiveRecord::Base.transaction do
           Pug.scan_logs_of_network(network) do |logs|
             logs.each do |log|

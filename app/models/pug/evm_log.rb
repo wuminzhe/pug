@@ -160,8 +160,13 @@ module Pug
       #########################################
       # 3 - find model for this event then save
       #########################################
-      event_model_class = Pug.const_get(evm_contract.event_model_name(topic0))
-      raise "No model for event #{topic0}" if event_model_class.nil?
+      begin
+        event_model_name = evm_contract.event_model_name(topic0)
+        event_model_class = Pug.const_get(event_model_name)
+      rescue StandardError => e
+        puts "Error happened when init event model: #{event_model_name}, #{e.message}"
+        return
+      end
 
       record = Hash[event_column_names.zip(event_column_values)]
       puts "   #{event_model_class.name}"
