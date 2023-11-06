@@ -22,13 +22,48 @@
 #
 module Pug
   class EvmLog < ApplicationRecord
-    belongs_to :evm_contract
     belongs_to :network
+    belongs_to :evm_contract
+    belongs_to :evm_transaction
 
     alias contract evm_contract
     alias_attribute :signature, :topic0
 
     def self.create_from(network, log)
+      evm_contract = EvmContract.find_by(network:, address: log['address'])
+      raise "No contract for #{log['address']}" if evm_contract.nil?
+
+      # CREATE EvmTransaction of this log if not existed
+      #########################################
+      evm_transaction = EvmTransaction.find_by(network:, transaction_hash: log['transaction_hash'])
+      unless evm_transaction
+        tx = network.client.eth_get_transaction_by_hash(log['transaction_hash'])
+        evm_transaction = EvmTransaction.create!(
+          network:,
+          evm_contract:,
+          block_hash: tx['blockHash'],
+          block_number: tx['blockNumber'],
+          chain_id: tx['chainId'],
+          from: tx['from'],
+          to: tx['to'],
+          value: tx['value'],
+          gas: tx['gas'],
+          gas_price: tx['gasPrice'],
+          transaction_hash: tx['hash'],
+          input: tx['input'],
+          max_priority_fee_per_gas: tx['maxPriorityFeePerGas'],
+          max_fee_per_gas: tx['maxFeePerGas'],
+          nonce: tx['nonce'],
+          r: tx['r'],
+          s: tx['s'],
+          v: tx['v'],
+          transaction_index: tx['transactionIndex'],
+          transaction_type: tx['type']
+        )
+      end
+
+      # CREATE EvmLog
+      #########################################
       not_existed = find_by(
         network:,
         block_number: log['block_number'],
@@ -41,11 +76,10 @@ module Pug
         return
       end
 
-      evm_contract = EvmContract.find_by(network:, address: log['address'])
-
       evm_log = new(
         network:,
         evm_contract:,
+        evm_transaction:,
         address: log['address'],
         data: log['data'],
         block_number: log['block_number'],
@@ -60,7 +94,10 @@ module Pug
       end
 
       evm_log.save!
-      evm_log.decode
+
+      # CREATE event model record
+      #########################################
+      evm_log.decode!
     end
 
     def topics
@@ -89,7 +126,7 @@ module Pug
     #   "stateMutability"=>"nonpayable",
     #   "type"=>"function"
     # }
-    def decode
+    def decode!
       #########################################
       # 1 - columns names
       #########################################

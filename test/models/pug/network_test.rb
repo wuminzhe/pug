@@ -7,7 +7,8 @@
 #  name               :string
 #  display_name       :string
 #  rpc                :string
-#  scan_span          :integer          default(5000)
+#  explorer           :string
+#  scan_span          :integer          default(2000)
 #  last_scanned_block :integer          default(0)
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null

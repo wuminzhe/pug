@@ -66,7 +66,8 @@ module Pug
       raise e unless e.message.include? 'No explorer api found for this network'
 
       file = find_abi_from_db_with_same_address(address)
-      return file unless file.nil?
+      name = File.basename(file, '.json').split('-')[0]
+      return [name, file] unless file.nil?
 
       puts e.message
       puts 'Select abi file from local'

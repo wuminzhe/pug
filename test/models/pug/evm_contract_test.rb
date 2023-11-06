@@ -5,6 +5,7 @@
 #  id                 :integer          not null, primary key
 #  network_id         :integer
 #  address            :string
+#  name               :string
 #  abi_file           :string
 #  creator            :string
 #  creation_block     :integer
