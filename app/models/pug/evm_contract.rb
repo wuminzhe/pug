@@ -72,25 +72,33 @@ module Pug
       model_name.singularize.camelize
     end
 
-    def call(method, *params)
+    # https://github.com/q9f/eth.rb/blob/a5274152d1d9f0d26a849727156078f9ec97d6e2/lib/eth/client.rb#L251
+    # examples:
+    #  contract = Pug::EvmContract.find_by(network: Pug::Network.find_by(name: 'arb_sep'), name: 'ORMP')
+    #  contract.call('appConfig', '0x001ddfd752a071964fe15c2386ec1811963d00c2')
+    #  contract.call('messageCount')
+    #  contract.call('imtBranch')
+    def call(function, *args, **kwargs)
       network.client.call(
         Eth::Contract.from_abi(name:, address:, abi:),
-        method,
-        *params
+        function,
+        *args,
+        **kwargs
       )
     end
 
-    def transact_and_wait(
-      signer, # Eth::Key
-      method,
-      *params
-    )
+    # https://github.com/q9f/eth.rb/blob/a5274152d1d9f0d26a849727156078f9ec97d6e2/lib/eth/client.rb#L316
+    # example:
+    #   sender_key = Eth::Key.new priv: "30137644b564785d01420f8043f043d74dcca64008e57c59f8ce713a0005a54b"
+    #   contract = Pug::EvmContract.find_by(network: Pug::Network.find_by(name: 'arb_sep'), name: 'ORMP')
+    #   contract.transact_and_wait('setAppConfig', '0x2d234b332E94257f6538290Ae335eEF94B0974F0', '0x2d234b332E94257f6538290Ae335eEF94B0974F0', sender_key: sender_key, gas_limit: 22000)
+    def transact_and_wait(function, *args, **kwargs)
       # https://github.com/q9f/eth.rb/wiki/Smart-Contracts
       network.client.transact_and_wait(
         Eth::Contract.from_abi(name:, address:, abi:),
-        method,
-        *params,
-        sender_key: signer
+        function,
+        *args,
+        **kwargs
       )
     end
 
