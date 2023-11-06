@@ -5,6 +5,7 @@
 #  id                 :integer          not null, primary key
 #  network_id         :integer
 #  address            :string
+#  name               :string
 #  abi_file           :string
 #  creator            :string
 #  creation_block     :integer
@@ -18,9 +19,12 @@ module Pug
   class EvmContract < ApplicationRecord
     belongs_to :network
 
+    alias_attribute :contract_name, :name
+
     def raw_abi
       read_abi
     end
+    alias abi raw_abi
 
     def raw_event_abi(name_or_signature)
       raw_abi.find do |item|
@@ -52,8 +56,6 @@ module Pug
     def event_signatures
       parsed_abi.events.map(&:signature).map { |sig| "0x#{sig}" }
     end
-
-    alias_attribute :contract_name, :name
 
     def event_columns(name_or_signature)
       event_inputs = raw_event_abi(name_or_signature).fetch('inputs', [])
