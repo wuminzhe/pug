@@ -72,6 +72,28 @@ module Pug
       model_name.singularize.camelize
     end
 
+    def call(method, *params)
+      network.client.call(
+        Eth::Contract.from_abi(name:, address:, abi:),
+        method,
+        *params
+      )
+    end
+
+    def transact_and_wait(
+      signer, # Eth::Key
+      method,
+      *params
+    )
+      # https://github.com/q9f/eth.rb/wiki/Smart-Contracts
+      network.client.transact_and_wait(
+        Eth::Contract.from_abi(name:, address:, abi:),
+        method,
+        *params,
+        sender_key: signer
+      )
+    end
+
     private
 
     def shorten_string(string)

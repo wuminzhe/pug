@@ -8,6 +8,9 @@ module Api
 
     attr_reader :client
 
+    delegate :call, to: :@client
+    delegate :transact_and_wait, to: :@client
+
     def respond_to_missing?(*_args)
       true
     end
