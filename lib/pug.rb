@@ -45,7 +45,7 @@ module Pug
       result.blank? ? nil : result.strip
     end
 
-    def get_contract_abi(chain_id, address)
+    def get_contract_abi_from_explorer(chain_id, address)
       network_name = Pug::Network.find_by(chain_id:).name
       raise "Network with chain_id #{chain_id} not found" if network_name&.nil?
 
@@ -62,17 +62,22 @@ module Pug
       [name, abi]
     end
 
+    # 先从数据库中找其他链上的同名合约，
+    # 找不到再从etherscan中找
+    # 如果etherscan中也没有，就让用户选择本地的abi文件
     def prepare_abi(chain_id, address)
+      file = find_abi_from_db_with_same_address(address)
+      if file
+        name = File.basename(file, '.json').split('-')[0]
+        return [name, file]
+      end
+
       # fetch abi from etherscan first.
-      name, abi = get_contract_abi(chain_id, address)
+      name, abi = get_contract_abi_from_explorer(chain_id, address)
       file = save(name, abi)
       [name, file]
     rescue StandardError => e
       raise e unless e.message.include? 'No explorer api found for this network'
-
-      file = find_abi_from_db_with_same_address(address)
-      name = File.basename(file, '.json').split('-')[0]
-      return [name, file] unless file.nil?
 
       puts e.message
       puts 'Select abi file from local'

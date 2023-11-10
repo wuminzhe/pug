@@ -46,7 +46,7 @@ namespace :pug do
     chain_id = args[:chain_id]
     address = args[:address]
 
-    name, abi = Pug.get_contract_abi(chain_id, address)
+    name, abi = Pug.get_contract_abi_from_explorer(chain_id, address)
     file = Pug.save(name, abi)
   end
 
