@@ -51,7 +51,12 @@ module Pug
 
       raise 'No explorer api found for this network' unless Api::Etherscan.respond_to? network_name
 
-      contract_abi = Api::Etherscan.send(network_name).extract_contract_abi(address)
+      explorer = if ENV['ETHERSCAN_API_KEY']
+                   Api::Etherscan.send(network_name, ENV['ETHERSCAN_API_KEY'])
+                 else
+                   Api::Etherscan.send(network_name)
+                 end
+      contract_abi = explorer.extract_contract_abi(address)
       name = contract_abi[:contract_name]
       abi = contract_abi[:abi]
       [name, abi]
