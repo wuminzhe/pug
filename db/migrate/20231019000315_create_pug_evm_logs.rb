@@ -15,6 +15,9 @@ class CreatePugEvmLogs < ActiveRecord::Migration[7.1]
       t.string :topic1
       t.string :topic2
       t.string :topic3
+      # decoded
+      t.string :event_name
+      t.jsonb :decoded
 
       t.timestamps
     end
@@ -24,5 +27,10 @@ class CreatePugEvmLogs < ActiveRecord::Migration[7.1]
     add_index :pug_evm_logs, :topic1
     add_index :pug_evm_logs, :topic2
     add_index :pug_evm_logs, :topic3
+
+    # For decoded data query
+    add_index :pug_evm_logs, :network_id
+    add_index :pug_evm_logs, :event_name
+    add_index :pug_evm_logs, :decoded, using: :gin # http://www.pgsql.tech/article_104_10000050
   end
 end

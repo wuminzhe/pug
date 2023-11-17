@@ -29,6 +29,14 @@ module Pug
     alias contract evm_contract
     alias_attribute :signature, :topic0
 
+    scope :with_network, ->(network) { where(network:) }
+    scope :with_event, ->(event_name) { where(event_name:) }
+    scope :field_eq, ->(field, value) { where("decoded->>? = '?'", field, value) }
+    scope :field_gt, ->(field, value) { where("decoded->>? > '?'", field, value) }
+    scope :field_gte, ->(field, value) { where("decoded->>? >= '?'", field, value) }
+    scope :field_lt, ->(field, value) { where("decoded->>? < '?'", field, value) }
+    scope :field_lte, ->(field, value) { where("decoded->>? <= '?'", field, value) }
+
     def self.create_from(network, log)
       evm_contract = EvmContract.find_by(network:, address: log['address'])
       raise "No contract for #{log['address']}" if evm_contract.nil?
@@ -93,11 +101,12 @@ module Pug
         evm_log.send("topic#{index}=", topic)
       end
 
-      evm_log.save!
-
-      # CREATE event model record
+      # DECODE
       #########################################
       evm_log.decode!
+
+      # SAVE TO DB
+      evm_log.save!
     end
 
     def topics
@@ -158,37 +167,16 @@ module Pug
       event_column_values = transform_values(event_column_values).flatten
 
       #########################################
-      # 3 - find model for this event then save
+      # 3 - save
       #########################################
-      begin
-        event_model_name = evm_contract.event_model_name(topic0)
-        event_model_class = Pug.const_get(event_model_name)
-      rescue StandardError => e
-        puts "Error happened when init event model: #{event_model_name}, #{e.message}"
-        return
-      end
-
       record = Hash[event_column_names.zip(event_column_values)]
-      puts "   #{event_model_class.name}"
+      self.event_name = evm_contract.event_name(topic0)
+      self.decoded = record
+
+      puts "   #{event_name}"
       print '   '
       p record
       puts ''
-      record[:pug_evm_contract] = evm_contract
-      record[:pug_evm_log] = self
-      record[:pug_network] = network
-      record[:block_number] = block_number
-      record[:transaction_index] = transaction_index
-      record[:log_index] = log_index
-      record[:timestamp] = timestamp
-
-      if event_model_class.find_by(
-        pug_network: record[:pug_network],
-        block_number: record[:block_number],
-        transaction_index: record[:transaction_index],
-        log_index: record[:log_index]
-      ).blank?
-        event_model_class.create!(record)
-      end
     end
 
     def transform_values(v)

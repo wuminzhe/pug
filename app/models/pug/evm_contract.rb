@@ -18,6 +18,7 @@
 module Pug
   class EvmContract < ApplicationRecord
     belongs_to :network
+    has_many :evm_logs, dependent: :destroy
 
     alias_attribute :contract_name, :name
 
@@ -63,7 +64,11 @@ module Pug
       build_columns(params)
     end
 
-    def event_model_name(name_or_signature)
+    def event_name(name_or_signature)
+      parsed_event_abi(name_or_signature).name
+    end
+
+    def event_full_name(name_or_signature)
       event_name = parsed_event_abi(name_or_signature).name
       model_name = "#{contract_name.underscore}_#{event_name.underscore}"
       if model_name.pluralize.length > 63
