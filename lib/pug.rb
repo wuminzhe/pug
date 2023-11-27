@@ -47,7 +47,7 @@ module Pug
       network_name = Pug::Network.find_by(chain_id:).name
       raise "Network with chain_id #{chain_id} not found" if network_name&.nil?
 
-      raise 'No explorer api found for this network' unless Api::Etherscan.respond_to? network_name
+      return unless Api::Etherscan.respond_to? network_name
 
       explorer = if ENV['ETHERSCAN_API_KEY']
                    Api::Etherscan.send(network_name, ENV['ETHERSCAN_API_KEY'])
@@ -72,15 +72,14 @@ module Pug
 
       # fetch abi from etherscan first.
       name, abi = get_contract_abi_from_explorer(chain_id, address)
-      file = save(name, abi)
-      [name, file]
-    rescue StandardError => e
-      raise e unless e.message.include? 'No explorer api found for this network'
-
-      puts e.message
-      puts 'Select abi file from local'
+      if name && abi
+        file = save(name, abi)
+        [name, file]
+      end
 
       # select abi file if not found on etherscan
+      puts e.message
+      puts 'Select abi file from local'
       file = select_abi
       name = File.basename(file, '.json').split('-')[0]
       [name, file]
@@ -117,7 +116,7 @@ module Pug
           timestamp: Time.at(data['deploy_at'])
         }
       else
-        raise "No explorer api found for network #{network.name}"
+        raise "Can not get creation info for there is no explorer api found for network #{network.name}"
       end
     end
 
