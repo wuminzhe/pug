@@ -74,11 +74,10 @@ module Pug
       name, abi = get_contract_abi_from_explorer(chain_id, address)
       if name && abi
         file = save(name, abi)
-        [name, file]
+        return [name, file]
       end
 
       # select abi file if not found on etherscan
-      puts e.message
       puts 'Select abi file from local'
       file = select_abi
       name = File.basename(file, '.json').split('-')[0]
