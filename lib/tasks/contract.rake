@@ -7,11 +7,17 @@ namespace :pug do
     address = args[:address].downcase
 
     network = Pug::Network.find_by(chain_id:)
-    raise "Network with chain_id #{chain_id} not found" if network.nil?
+    if network.nil?
+      puts "Network with chain_id #{chain_id} not found"
+      next
+    end
 
     # check if contract exists
     contract = Pug::EvmContract.find_by(network:, address:)
-    raise "Contract with address #{address} on #{chain_id} already exists" unless contract.nil?
+    unless contract.nil?
+      puts "Contract with address #{address} on #{chain_id} already exists"
+      next
+    end
 
     name, abi_file = Pug.prepare_abi(chain_id, address)
     if abi_file.nil?
