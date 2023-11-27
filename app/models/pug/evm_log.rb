@@ -31,11 +31,13 @@ module Pug
 
     scope :with_network, ->(network) { where(network:) }
     scope :with_event, ->(event_name) { where(event_name:) }
-    scope :field_eq, ->(field, value) { where("decoded->>? = '?'", field, value) }
-    scope :field_gt, ->(field, value) { where("decoded->>? > '?'", field, value) }
-    scope :field_gte, ->(field, value) { where("decoded->>? >= '?'", field, value) }
-    scope :field_lt, ->(field, value) { where("decoded->>? < '?'", field, value) }
-    scope :field_lte, ->(field, value) { where("decoded->>? <= '?'", field, value) }
+    scope :field_eq, lambda { |field, value|
+                       where('decoded->>? = ?', field, value)
+                     }
+    scope :field_gt, ->(field, value) { where('decoded->>? > ?', field, value) }
+    scope :field_gte, ->(field, value) { where('decoded->>? >= ?', field, value) }
+    scope :field_lt, ->(field, value) { where('decoded->>? < ?', field, value) }
+    scope :field_lte, ->(field, value) { where('decoded->>? <= ?', field, value) }
 
     def self.create_from(network, log)
       evm_contract = EvmContract.find_by(network:, address: log['address'])
