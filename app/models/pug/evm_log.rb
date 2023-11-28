@@ -31,9 +31,11 @@ module Pug
 
     scope :with_network, ->(network) { where(network:) }
     scope :with_event, ->(event_name) { where(event_name:) }
-    scope :field_eq, lambda { |field, value|
-                       where('decoded->>? = ?', field, value)
-                     }
+
+    # scopes for decoded field query
+    # https://www.postgresql.org/docs/9.5/functions-json.html
+    # https://www.reddit.com/r/rails/comments/10a1fww/jsonb_queries_cheatsheet/
+    scope :field_eq, ->(field, value) { where('decoded->>? = ?', field, value) }
     scope :field_gt, ->(field, value) { where('decoded->>? > ?', field, value) }
     scope :field_gte, ->(field, value) { where('decoded->>? >= ?', field, value) }
     scope :field_lt, ->(field, value) { where('decoded->>? < ?', field, value) }
