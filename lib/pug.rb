@@ -6,9 +6,9 @@ require 'api/subscan'
 require 'api/rpc_client'
 require 'eth'
 include Eth
-require 'pug/abicoder'
-
 require 'json'
+require 'abi_coder_rb'
+
 #################################
 # Task helper methods
 #################################
@@ -138,7 +138,7 @@ module Pug
 
       block.call logs, last_scanned_block
       network.update(last_scanned_block:)
-      puts "   Scanned `#{network.display_name}` in [#{from_block},#{last_scanned_block}]"
+      puts "== Scanned `#{network.display_name}` in [#{from_block},#{last_scanned_block}]"
       puts "\n"
     end
 
