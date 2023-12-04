@@ -17,5 +17,6 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency 'abi_coder_rb', '~> 0.2.2'
+  spec.add_dependency 'etherscan', '~> 0.2.3'
   spec.add_dependency 'rails', '>= 7.1.1'
 end

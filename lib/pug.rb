@@ -1,7 +1,8 @@
 require 'pug/version'
+require 'etherscan'
+
 require 'pug/engine'
 require 'pug/utils'
-require 'api/etherscan'
 require 'api/subscan'
 require 'api/rpc_client'
 require 'eth'
@@ -47,16 +48,11 @@ module Pug
       network_name = Pug::Network.find_by(chain_id:).name
       raise "Network with chain_id #{chain_id} not found" if network_name&.nil?
 
-      return unless Api::Etherscan.respond_to? network_name
+      explorer = Etherscan.api(network_name, ENV['ETHERSCAN_API_KEY'])
+      result = explorer.contract_getsourcecode(address:)[0]
+      abi = JSON.parse result['ABI']
+      name = result['ContractName']
 
-      explorer = if ENV['ETHERSCAN_API_KEY']
-                   Api::Etherscan.send(network_name, ENV['ETHERSCAN_API_KEY'])
-                 else
-                   Api::Etherscan.send(network_name)
-                 end
-      contract_abi = explorer.extract_contract_abi(address)
-      name = contract_abi[:contract_name]
-      abi = contract_abi[:abi]
       [name, abi]
     end
 
@@ -89,8 +85,18 @@ module Pug
     end
 
     def get_creation_info(network, address)
-      if Api::Etherscan.respond_to? network.name
-        data = Api::Etherscan.send(network.name).contract_getcontractcreation({ contractaddresses: address })
+      if Api::Subscan.respond_to? network.name
+        data = Api::Subscan.send(network.name).evm_contract({ address: })
+        raise "Contract with address #{address} not found on subscan" if data.blank?
+
+        {
+          creator: data['deployer'],
+          tx_hash: data['transaction_hash'],
+          block: data['block_num'],
+          timestamp: Time.at(data['deploy_at'])
+        }
+      else
+        data = Etherscan.api(network.name).contract_getcontractcreation(contractaddresses: address)
         raise "Contract with address #{address} not found on etherscan" if data.empty?
 
         # TODO: check the rpc is available
@@ -104,18 +110,6 @@ module Pug
           block: creation_block,
           timestamp: Time.at(creation_timestamp)
         }
-      elsif Api::Subscan.respond_to? network.name
-        data = Api::Subscan.send(network.name).evm_contract({ address: })
-        raise "Contract with address #{address} not found on subscan" if data.blank?
-
-        {
-          creator: data['deployer'],
-          tx_hash: data['transaction_hash'],
-          block: data['block_num'],
-          timestamp: Time.at(data['deploy_at'])
-        }
-      else
-        raise "Can not get creation info for there is no explorer api found for network #{network.name}"
       end
     end
 
