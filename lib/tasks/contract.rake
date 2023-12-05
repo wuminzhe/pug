@@ -3,8 +3,20 @@ namespace :pug do
   # rails "app:add_contract[421_613,0x000000007e24da6666c773280804d8021e12e13f]"
   desc 'Add a contract'
   task :add_contract, %i[chain_id address] => :environment do |_t, args|
-    chain_id = args[:chain_id]
-    address = args[:address].downcase
+    chain_id = args[:chain_id].to_i
+
+    address, tron_address =
+      if Pug::TronAddress.tron_address?(args[:address])
+        [
+          "0x#{Pug::TronAddress.base58check_to_hex(args[:address])}",
+          args[:address]
+        ]
+      else
+        [
+          args[:address].downcase,
+          nil
+        ]
+      end
 
     network = Pug::Network.find_by(chain_id:)
     if network.nil?
@@ -13,19 +25,19 @@ namespace :pug do
     end
 
     # check if contract exists
-    contract = Pug::EvmContract.find_by(network:, address:)
+    contract = Pug::EvmContract.find_by(network:, address: tron_address || address)
     unless contract.nil?
       puts "Contract with address #{address} on #{chain_id} already exists"
       next
     end
 
-    name, abi_file = Pug.prepare_abi(chain_id, address)
+    name, abi_file = Pug.prepare_abi(chain_id, tron_address || address)
     if abi_file.nil?
       puts 'No abi file found or selected.'
       next
     end
 
-    creation_info = Pug.get_creation_info(network, address)
+    creation_info = Pug::ContractInfo.creation_info(network, tron_address || address)
 
     Pug::EvmContract.create!(
       network_id: network.id,
@@ -36,14 +48,15 @@ namespace :pug do
       creation_tx_hash: creation_info[:tx_hash],
       creation_block: creation_info[:block],
       creation_timestamp: creation_info[:timestamp],
-      last_scanned_block: creation_info[:block]
+      last_scanned_block: creation_info[:block],
+      tron_address:
     )
 
     if network.last_scanned_block.zero? || creation_info[:block] < network.last_scanned_block
       network.update!(last_scanned_block: creation_info[:block])
     end
 
-    puts "Contract #{address} on '#{network.display_name}' added"
+    puts "Contract #{tron_address || address} on '#{network.display_name}' added"
   end
 
   desc 'List contracts'
