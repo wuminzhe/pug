@@ -25,7 +25,7 @@ namespace :pug do
     end
 
     # check if contract exists
-    contract = Pug::EvmContract.find_by(network:, address: tron_address || address)
+    contract = Pug::EvmContract.find_by(network:, address:)
     unless contract.nil?
       puts "Contract with address #{address} on #{chain_id} already exists"
       next
