@@ -20,7 +20,7 @@ module Pug
     def client
       raise 'rpc is empty' if rpc.blank?
 
-      Api::RpcClient.new(rpc)
+      JsonRpcClient.new(rpc)
     end
   end
 end

@@ -1,14 +1,16 @@
 require 'pug/version'
-require 'etherscan'
 
-require 'pug/engine'
-require 'pug/utils'
-require 'api/subscan'
-require 'api/rpc_client'
+require 'abi_coder_rb'
+require 'etherscan'
 require 'eth'
 include Eth
 require 'json'
-require 'abi_coder_rb'
+
+require 'pug/engine'
+require 'pug/utils'
+require 'pug/json_rpc_client'
+require 'pug/contract_info'
+require 'pug/tron_address'
 
 #################################
 # Task helper methods
@@ -16,6 +18,15 @@ require 'abi_coder_rb'
 module Pug
   class << self
     def save(name, abi)
+      # for tron abi
+      abi = abi.map do |item|
+        item['type'] = item['type'].downcase
+        item['anonymous'] = false if item['anonymous'].nil?
+        item['inputs'] = [] if item['inputs'].nil?
+        item
+      end
+      abi = abi.filter { |item| item['type'] == 'event' }
+
       # generate filename
       contract_abi_hash = Digest::SHA256.hexdigest(abi.to_json)
       filename = "#{name}-#{contract_abi_hash[-10..]}.json"
@@ -44,18 +55,6 @@ module Pug
       result.blank? ? nil : result.strip
     end
 
-    def get_contract_abi_from_explorer(chain_id, address)
-      network_name = Pug::Network.find_by(chain_id:).name
-      raise "Network with chain_id #{chain_id} not found" if network_name&.nil?
-
-      explorer = Etherscan.api(network_name, ENV['ETHERSCAN_API_KEY'])
-      result = explorer.contract_getsourcecode(address:)[0]
-      abi = JSON.parse result['ABI']
-      name = result['ContractName']
-
-      [name, abi]
-    end
-
     # 先从数据库中找其他链上的同名合约，
     # 找不到再从etherscan中找
     # 如果etherscan中也没有，就让用户选择本地的abi文件
@@ -67,7 +66,7 @@ module Pug
       end
 
       # fetch abi from etherscan first.
-      name, abi = get_contract_abi_from_explorer(chain_id, address)
+      name, abi = ContractInfo.contract_abi(chain_id, address)
       if name && abi
         file = save(name, abi)
         return [name, file]
@@ -82,35 +81,6 @@ module Pug
 
     def find_abi_from_db_with_same_address(address)
       EvmContract.find_by(address:)&.abi_file
-    end
-
-    def get_creation_info(network, address)
-      if Api::Subscan.respond_to? network.name
-        data = Api::Subscan.send(network.name).evm_contract({ address: })
-        raise "Contract with address #{address} not found on subscan" if data.blank?
-
-        {
-          creator: data['deployer'],
-          tx_hash: data['transaction_hash'],
-          block: data['block_num'],
-          timestamp: Time.at(data['deploy_at'])
-        }
-      else
-        data = Etherscan.api(network.name).contract_getcontractcreation(contractaddresses: address)
-        raise "Contract with address #{address} not found on etherscan" if data.empty?
-
-        # TODO: check the rpc is available
-        client = Api::RpcClient.new(network.rpc)
-        creation_block = client.eth_get_transaction_by_hash(data[0]['txHash'])['blockNumber'].to_i(16)
-        creation_timestamp = client.get_block_by_number(creation_block)['timestamp'].to_i(16)
-
-        {
-          creator: data[0]['contractCreator'],
-          tx_hash: data[0]['txHash'],
-          block: creation_block,
-          timestamp: Time.at(creation_timestamp)
-        }
-      end
     end
 
     def scan_logs_of_network(network, &block)

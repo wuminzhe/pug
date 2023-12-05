@@ -1,6 +1,6 @@
 # https://docs.infura.io/networks/ethereum/json-rpc-methods
-module Api
-  class RpcClient
+module Pug
+  class JsonRpcClient
     # build EvmTrackHelper instance
     def initialize(url)
       @client = Eth::Client::Http.new(url)
@@ -217,7 +217,10 @@ module Api
     end
 
     def to_hex(number)
-      '0x' + number.to_s(16)
+      hex = number.to_s(16)
+      hex = "0#{hex}" if hex.length.odd?
+
+      "0x#{hex}"
     end
   end
 end
@@ -226,5 +229,5 @@ end
 # rpc = 'https://arbitrum-goerli.publicnode.com'
 # # rpc = 'https://rpc.darwinia.network'
 #
-# client = Client::RpcClient.new(rpc)
+# client = JsonRpcClient.new(rpc)
 # p client.eth_block_number
