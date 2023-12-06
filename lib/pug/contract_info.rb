@@ -30,19 +30,7 @@ module Pug
             timestamp: Time.at(creation_timestamp)
           }
         elsif api.is_a?(Tronscan::Api)
-          result = api.contract(contract: address)
-          data = result['data']
-
-          client = JsonRpcClient.new(network.rpc)
-          creation_block = client.eth_get_transaction_by_hash(data[0]['creator']['txHash'])['blockNumber'].to_i(16)
-
-          {
-            creator: data[0]['creator']['address'],
-            tx_hash: data[0]['creator']['txHash'],
-            block: creation_block,
-            timestamp: Time.at(data[0]['date_created'] / 1000)
-          }
-
+          Trongrid.contract_creation_info(network.chain_id, address)
         else
           raise 'Not supported'
         end
@@ -79,6 +67,8 @@ module Pug
       def contract_abi(chain_id, address)
         if chain_id == 2_494_104_990
           url = URI('https://api.shasta.trongrid.io/wallet/getcontract')
+        elsif chain_id == 3_448_148_188
+          url = URI('https://nile.trongrid.io/wallet/getcontract')
         elsif chain_id == 728_126_428
           url = URI('https://api.trongrid.io/wallet/getcontract')
         else
@@ -96,6 +86,41 @@ module Pug
         response = http.request(request)
         result = JSON.parse response.body
         [result['abi']['entrys'], result['name']]
+      end
+
+      # curl --request GET \
+      #   --url 'https://nile.trongrid.io/v1/contracts/TX4YnjwVQncmVLrwtfvLpauYJmyK6Qc2Rv/transactions?order_by=block_timestamp%2Casc&limit=1' \
+      #   --header 'accept: application/json'
+      def contract_creation_info(chain_id, address)
+        path = "v1/contracts/#{address}/transactions?order_by=block_timestamp%2Casc&limit=1"
+
+        url =
+          if chain_id == 2_494_104_990
+            URI("https://api.shasta.trongrid.io/#{path}")
+          elsif chain_id == 3_448_148_188
+            URI("https://nile.trongrid.io/#{path}")
+          elsif chain_id == 728_126_428
+            URI("https://api.trongrid.io/#{path}")
+          else
+            raise "Not supported chain_id #{chain_id}"
+          end
+
+        http = Net::HTTP.new(url.host, url.port)
+        http.use_ssl = true
+
+        request = Net::HTTP::Get.new(url)
+        request['accept'] = 'application/json'
+
+        response = http.request(request)
+        result = JSON.parse response.body
+        {
+          creator: '0x' + result['data'][0]['raw_data']['contract'][0]['parameter']['value']['owner_address'],
+          tx_hash: '0x' + result['data'][0]['txID'],
+          block: result['data'][0]['blockNumber'],
+          timestamp: Time.at(result['data'][0]['block_timestamp'].to_i / 1000)
+          # name: result['data'][0]['raw_data']['contract'][0]['parameter']['value']['new_contract']['name'],
+          # abi: result['data'][0]['raw_data']['contract'][0]['parameter']['value']['new_contract']['abi']['entrys']
+        }
       end
     end
   end
