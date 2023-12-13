@@ -218,7 +218,7 @@ module Pug
 
     def to_hex(number)
       hex = number.to_s(16)
-      hex = "0#{hex}" if hex.length.odd?
+      # hex = "0#{hex}" if hex.length.odd?
 
       "0x#{hex}"
     end
