@@ -109,30 +109,53 @@ module Pug
 
       # DECODE
       #########################################
-      evm_log.decode!
-
-      # SAVE TO DB
-      evm_log.save!
+      evm_log.decode_and_save!
     end
 
     def topics
       [topic0, topic1, topic2, topic3].compact
     end
 
-    def decode!
+    def decode_and_save!
       self.event_name = evm_contract.event_name(topic0)
       p event_name
 
       event_abi = evm_contract.raw_event_abi(topic0)
-      event_decoder = EventDecoder.new(event_abi)
+      event_decoder = EventDecoder.new(event_abi, '_')
 
       decoded_topics = event_decoder.decode_topics(topics, with_names: true)
       decoded_data = event_decoder.decode_data(data, with_names: true, flatten: true)
 
+      # save decoded data to decoded field
+      #########################################
       self.decoded = decoded_topics.merge(decoded_data)
+      save!
 
       p decoded
       puts ''
+
+      # save decoded data to model
+      #########################################
+      event_model_name = evm_contract.event_full_name(topic0)
+      event_model_class = Pug.const_get(event_model_name)
+
+      record = decoded_topics.merge(decoded_data)
+      record[:pug_evm_contract] = evm_contract
+      record[:pug_evm_log] = self
+      record[:pug_network] = network
+      record[:block_number] = block_number
+      record[:transaction_index] = transaction_index
+      record[:log_index] = log_index
+      record[:timestamp] = timestamp
+
+      if event_model_class.find_by(
+        pug_network: record[:pug_network],
+        block_number: record[:block_number],
+        transaction_index: record[:transaction_index],
+        log_index: record[:log_index]
+      ).blank?
+        event_model_class.create!(record)
+      end
     end
   end
 end

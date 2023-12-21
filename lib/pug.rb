@@ -11,6 +11,9 @@ require 'pug/utils'
 require 'pug/json_rpc_client'
 require 'pug/contract_info'
 require 'pug/tron_address'
+require 'pug/model'
+
+require 'generators/evm_event_model/evm_event_model_generator'
 
 #################################
 # Task helper methods
