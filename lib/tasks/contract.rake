@@ -5,8 +5,10 @@ namespace :pug do
   task :add_contract, %i[chain_id address] => :environment do |_t, args|
     chain_id = args[:chain_id].to_i
 
+    tron = [2_494_104_990, 728_126_428].include?(chain_id)
+
     address, tron_address =
-      if Pug::TronAddress.tron_address?(args[:address])
+      if tron && Pug::TronAddress.tron_address?(args[:address])
         [
           "0x#{Pug::TronAddress.base58check_to_hex(args[:address])}",
           args[:address]
