@@ -59,9 +59,13 @@ module Pug
     end
 
     def event_columns(name_or_signature)
-      event_inputs = raw_event_abi(name_or_signature).fetch('inputs', [])
-      params = get_params(event_inputs)
-      build_columns(params)
+      event_abi = evm_contract.raw_event_abi(name_or_signature)
+      event_decoder = EventDecoder.new(event_abi)
+
+      flatten_fields = event_decoder.indexed_topic_fields + event_decoder.data_fields_flatten(sep: '_')
+      flatten_fields.map do |field|
+        [field[0], to_rails_type(field[1])]
+      end
     end
 
     def event_name(name_or_signature)
@@ -135,13 +139,6 @@ module Pug
       JSON.parse(File.read(abi_file))
     end
 
-    # TODO: prefix config
-    def build_columns(params)
-      params
-        .reduce([]) { |acc, param| acc + Pug::Utils.flat(nil, param) }
-        .map { |param| [param[0], to_rails_type(param[1])] }
-    end
-
     def to_rails_type(abi_type)
       if abi_type == 'address'
         'string'
@@ -159,30 +156,6 @@ module Pug
         'string'
       else
         abi_type
-      end
-    end
-
-    # returns:
-    # [
-    #   ["root", "bytes32"], <-------- name, type(content)
-    #   ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
-    # ]
-    def get_params(inputs)
-      inputs.map do |input|
-        type(input)
-      end
-    end
-
-    # result examples:
-    # ["root", "bytes32"]
-    # ["message", [["channel", "address"], ["index", "uint256"], ["fromChainId", "uint256"], ["from", "address"], ["toChainId", "uint256"], ["to", "address"], ["encoded", "bytes"]]]
-    def type(input)
-      if input['type'] == 'tuple'
-        [input['name'], input['components'].map { |c| type(c) }]
-      elsif input['type'] == 'enum'
-        [input['name'], 'uint8']
-      else
-        [input['name'], input['type']]
       end
     end
   end

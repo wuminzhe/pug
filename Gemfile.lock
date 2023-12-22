@@ -14,14 +14,14 @@ PATH
   remote: .
   specs:
     pug (0.1.0)
-      abi_coder_rb (~> 0.2.3)
+      abi_coder_rb (~> 0.2.4)
       etherscan (~> 0.3.0)
       rails (>= 7.1.1)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    abi_coder_rb (0.2.3)
+    abi_coder_rb (0.2.4)
       activesupport
     actioncable (7.1.1)
       actionpack (= 7.1.1)
@@ -100,7 +100,7 @@ GEM
       activerecord (>= 3.2, < 8.0)
       rake (>= 10.4, < 14.0)
     base64 (0.2.0)
-    bigdecimal (3.1.4)
+    bigdecimal (3.1.5)
     builder (3.2.4)
     concurrent-ruby (1.2.2)
     connection_pool (2.4.1)

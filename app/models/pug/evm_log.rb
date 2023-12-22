@@ -121,10 +121,10 @@ module Pug
       p event_name
 
       event_abi = evm_contract.raw_event_abi(topic0)
-      event_decoder = EventDecoder.new(event_abi, '_')
+      event_decoder = EventDecoder.new(event_abi)
 
       decoded_topics = event_decoder.decode_topics(topics, with_names: true)
-      decoded_data = event_decoder.decode_data(data, with_names: true, flatten: true)
+      decoded_data = event_decoder.decode_data(data, with_names: true, flatten: true, sep: '_')
 
       # save decoded data to decoded field
       #########################################
