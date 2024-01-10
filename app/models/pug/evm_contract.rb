@@ -22,6 +22,11 @@ module Pug
 
     alias_attribute :contract_name, :name
 
+    before_create do
+      self.address = address.downcase
+      self.creator = creator.downcase
+    end
+
     def raw_abi
       read_abi
     end
@@ -59,7 +64,7 @@ module Pug
     end
 
     def event_columns(name_or_signature)
-      event_abi = evm_contract.raw_event_abi(name_or_signature)
+      event_abi = raw_event_abi(name_or_signature)
       event_decoder = EventDecoder.new(event_abi)
 
       flatten_fields = event_decoder.indexed_topic_fields + event_decoder.data_fields_flatten(sep: '_')
@@ -136,7 +141,7 @@ module Pug
     end
 
     def read_abi
-      JSON.parse(File.read(abi_file))
+      JSON.parse(File.read(File.join(Rails.root, abi_file)))
     end
 
     def to_rails_type(abi_type)
