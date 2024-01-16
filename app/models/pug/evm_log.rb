@@ -140,6 +140,7 @@ module Pug
       event_model_class = Pug.const_get(event_model_name)
 
       record = decoded_topics.merge(decoded_data)
+      record = record.transform_keys { |key| "f_#{key}" }
       record[:pug_evm_contract] = evm_contract
       record[:pug_evm_log] = self
       record[:pug_network] = network

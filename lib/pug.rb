@@ -9,9 +9,9 @@ require 'json'
 require 'pug/engine'
 require 'pug/utils'
 require 'pug/json_rpc_client'
-require 'pug/contract_info'
 require 'pug/tron_address'
 require 'pug/model'
+require 'pug/trongrid'
 
 require 'generators/evm_event_model/evm_event_model_generator'
 
@@ -44,46 +44,6 @@ module Pug
       end
 
       "#{dir}/#{filename}"
-    end
-
-    def select_abi
-      dir = "#{Rails.root}/public/abis"
-      filenames = Dir.foreach(dir).to_a.select { |filename| filename.end_with?('.json') }
-      files = filenames.map do |filename|
-        "#{dir}/#{filename}"
-      end
-      # TODO: check fzf installed
-      # `fzf --version`
-      result = `echo "#{files.join("\n")}" | fzf --preview 'cat {}'`
-      result.blank? ? nil : result.strip
-    end
-
-    # 先从数据库中找其他链上的同名合约，
-    # 找不到再从etherscan中找
-    # 如果etherscan中也没有，就让用户选择本地的abi文件
-    def prepare_abi(chain_id, address)
-      file = find_abi_from_db_with_same_address(address)
-      if file
-        name = File.basename(file, '.json').split('-')[0]
-        return [name, file]
-      end
-
-      # fetch abi from etherscan first.
-      name, abi = ContractInfo.contract_abi(chain_id, address)
-      if name && abi
-        file = save(name, abi)
-        return [name, file]
-      end
-
-      # select abi file if not found on etherscan
-      puts 'Select abi file from local'
-      file = select_abi
-      name = File.basename(file, '.json').split('-')[0]
-      [name, file]
-    end
-
-    def find_abi_from_db_with_same_address(address)
-      EvmContract.find_by(address:)&.abi_file
     end
 
     def scan_logs_of_network(network, &block)
@@ -132,28 +92,6 @@ module Pug
     # get the networks from contracts
     def active_networks
       Pug::EvmContract.includes(:network).map(&:network).uniq
-    end
-
-    def filter_rpc_list(rpc_list)
-      rpc_list&.select { |rpc| rpc.start_with?('http') && rpc !~ /\$\{(.+)\}/ }
-    end
-
-    def active_networks_fastest_rpc
-      require 'open-uri'
-
-      chains = JSON.parse(URI.open('https://chainid.network/chains_mini.json').read)
-      rpc_list_by_chain = chains.map do |chain|
-        [chain['chainId'], chain['rpc']]
-      end.to_h
-
-      active_networks.map do |network|
-        rpc_list = rpc_list_by_chain[network.chain_id]
-        return [network.chain_id, nil, nil] if rpc_list.nil?
-
-        rpc_list = filter_rpc_list(rpc_list)
-        fastest_rpc = Pug::Utils.fastest_rpc(rpc_list)
-        [network.chain_id, fastest_rpc].flatten
-      end
     end
   end
 end

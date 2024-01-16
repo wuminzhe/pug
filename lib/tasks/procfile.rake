@@ -1,10 +1,3 @@
-task default: :pug
-
-desc 'Explaining what the task does'
-task :pug do
-  puts "I'm a dog!"
-end
-
 namespace :pug do
   desc 'Generate or update Procfile.pug'
   task procfile: :environment do

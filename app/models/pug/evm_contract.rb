@@ -69,7 +69,7 @@ module Pug
 
       flatten_fields = event_decoder.indexed_topic_fields + event_decoder.data_fields_flatten(sep: '_')
       flatten_fields.map do |field|
-        [field[0], to_rails_type(field[1])]
+        ["f_#{field[0]}", to_rails_type(field[1])]
       end
     end
 
